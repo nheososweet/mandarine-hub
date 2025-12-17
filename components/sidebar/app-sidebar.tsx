@@ -55,6 +55,7 @@ import {
 } from "@/config/navigation";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import RealtimeClock from "./RealtimeClock";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
@@ -72,7 +73,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="border-r border-sidebar-border bg-sidebar"
     >
       {/* HEADER */}
-      <SidebarHeader className="border-b border-sidebar-border pb-4 pt-4">
+      <SidebarHeader className="pb-4 pt-4">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -99,7 +100,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       {/* CONTENT */}
-      <SidebarContent className="pt-4 overflow-x-hidden">
+      <SidebarContent className="overflow-x-hidden">
         {/* Navigation Groups */}
         {navigationGroups.map((group, groupIndex) => (
           <React.Fragment key={group.label}>
@@ -229,6 +230,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* FOOTER - User Menu with Dropdown */}
       <SidebarFooter className="border-t border-sidebar-border p-2 overflow-hidden">
         <SidebarMenu>
+          {/* <SidebarMenuItem>
+            <RealtimeClock className="px-2" locale="vi" />
+          </SidebarMenuItem> */}
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -304,11 +308,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           item.onClick();
                         }
                       }}
-                      className={`cursor-pointer gap-2 ${
-                        item.variant === "destructive"
-                          ? "text-destructive focus:text-destructive"
-                          : "text-popover-foreground"
-                      }`}
+                      className={`cursor-pointer gap-2 ${item.variant === "destructive"
+                        ? "text-destructive focus:text-destructive"
+                        : "text-popover-foreground"
+                        }`}
                     >
                       <item.icon className="size-4" />
                       <span>{item.label}</span>

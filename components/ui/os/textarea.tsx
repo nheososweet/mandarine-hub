@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useChatInput } from "@/providers/chat-input-provider";
 
 type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   className?: string;
@@ -19,7 +20,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ) => {
     const [showScroll, setShowScroll] = React.useState(false);
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
-
+    const { } = useChatInput();
     const adjustHeight = React.useCallback(() => {
       const textarea = textareaRef.current;
       if (!textarea) return;
@@ -93,8 +94,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "w-full resize-none bg-transparent shadow-sm",
-          // "rounded-xl border border-border",
+          "w-full resize-none bg-transparent",
           "border-none",
           "px-3 py-2",
           "text-sm leading-5",
@@ -102,8 +102,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           "focus-visible:ring-0.5 focus-visible:ring-ring focus-visible:border-primary/50 focus-visible:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
           showScroll ? "overflow-y-auto" : "overflow-hidden",
-          // Custom scrollbar
-          "[&::-webkit-scrollbar]:w-[3px]",
+          "[&::-webkit-scrollbar]:w-0.75",
           "[&::-webkit-scrollbar-track]:bg-transparent",
           "[&::-webkit-scrollbar-thumb]:bg-border",
           "[&::-webkit-scrollbar-thumb]:rounded-full",

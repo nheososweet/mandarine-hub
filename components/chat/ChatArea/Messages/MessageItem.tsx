@@ -7,13 +7,14 @@ import Audios from "./Multimedia/Audios";
 import { memo } from "react";
 import AgentThinkingLoader from "./AgentThinkingLoader";
 import { useStore } from "@/stores/os-store";
+import Image from "next/image";
 
 interface MessageProps {
   message: ChatMessage;
 }
 
 const AgentMessage = ({ message }: MessageProps) => {
-  const { streamingErrorMessage } = useStore();
+  const { streamingErrorMessage, isStreaming } = useStore();
   let messageContent;
   if (message.streamingError) {
     messageContent = (
@@ -70,8 +71,14 @@ const AgentMessage = ({ message }: MessageProps) => {
 
   return (
     <div className="flex flex-row items-start gap-4 font-geist">
-      <div className="flex-shrink-0">
-        <Icon type="agent" size="sm" />
+      <div className="shrink-0">
+        {/* <Icon type="agent" size="sm" /> */}
+        <Image
+          src={isStreaming ? "/thinking_face.webp" : "/think_face.webp"}
+          alt="Agent Avatar"
+          width={24}
+          height={24}
+        />
       </div>
       {messageContent}
     </div>
@@ -80,8 +87,8 @@ const AgentMessage = ({ message }: MessageProps) => {
 
 const UserMessage = memo(({ message }: MessageProps) => {
   return (
-    <div className="flex items-start gap-4 pt-4 text-start max-md:break-words">
-      <div className="flex-shrink-0">
+    <div className="flex items-start gap-4 pt-4 text-start max-md:wrap-break-word">
+      <div className="shrink-0">
         <Icon type="user" size="sm" />
       </div>
       <div className="text-md rounded-lg font-geist text-foreground">
