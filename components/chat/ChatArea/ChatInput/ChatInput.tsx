@@ -152,7 +152,8 @@ const ChatInput = () => {
     handleSubmit,
     canSubmit,
     isFocused,
-    setIsFocused
+    setIsFocused,
+    setIsListening
   } = useChatInput();
 
   const [selectedAgent] = useQueryState("agent");
@@ -275,7 +276,7 @@ const ChatInput = () => {
             <Paperclip className="h-4 w-4" />
           </Button>
 
-          <Button className="cursor-pointer" size={"icon-sm"} variant={"ghost"}>
+          <Button onClick={() => setIsListening(true)} className="cursor-pointer" size={"icon-sm"} variant={"ghost"}>
             <Mic className="h-4 w-4" />
           </Button>
         </div>
