@@ -1,45 +1,20 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Loader2, AlertCircle } from "lucide-react";
+import { Send, Loader2, AlertCircle, MessageSquare } from "lucide-react";
 import MarkdownRenderer from "@/components/ui/typography/MarkdownRenderer";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-// Shadcn UI Components (inline for artifact)
-const Button = ({
+const Alert = ({
   children,
   className = "",
-  disabled = false,
-  onClick,
-  ...props
+}: {
+  children: React.ReactNode;
+  className?: string;
 }) => (
-  <button
-    className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${className}`}
-    disabled={disabled}
-    onClick={onClick}
-    {...props}
-  >
-    {children}
-  </button>
-);
-
-const Input = ({ className = "", ...props }) => (
-  <input
-    className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-    {...props}
-  />
-);
-
-const Card = ({ children, className = "" }) => (
   <div
-    className={`rounded-lg border border-gray-200 bg-white text-gray-950 shadow-sm ${className}`}
-  >
-    {children}
-  </div>
-);
-
-const Alert = ({ children, className = "" }) => (
-  <div
-    className={`relative w-full rounded-lg border border-red-200 bg-red-50 p-4 text-red-900 ${className}`}
+    className={`relative w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive ${className}`}
   >
     {children}
   </div>
@@ -57,6 +32,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
+  const [hasFirstChunk, setHasFirstChunk] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -69,6 +45,8 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, streamingContent]);
 
+  console.log("re-render")
+
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -78,11 +56,9 @@ export default function ChatPage() {
     setIsLoading(true);
     setStreamingContent("");
 
-    // Add user message
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
 
     try {
-      // Create abort controller
       abortControllerRef.current = new AbortController();
 
       const response = await fetch(
@@ -121,9 +97,9 @@ export default function ChatPage() {
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6).trim();
+            setHasFirstChunk(true);
 
             if (data === "[DONE]") {
-              // Finalize message
               setMessages((prev) => [
                 ...prev,
                 { role: "assistant", content: accumulatedContent },
@@ -136,7 +112,6 @@ export default function ChatPage() {
             try {
               const parsed = JSON.parse(data);
 
-              // Extract content from LangChain format
               if (parsed.content) {
                 accumulatedContent += parsed.content;
                 setStreamingContent(accumulatedContent);
@@ -148,7 +123,6 @@ export default function ChatPage() {
         }
       }
 
-      // If loop exits without [DONE]
       if (accumulatedContent) {
         setMessages((prev) => [
           ...prev,
@@ -158,18 +132,19 @@ export default function ChatPage() {
       }
     } catch (err: any) {
       if (err.name === "AbortError") {
-        setError("Request was cancelled");
+        setError("Yêu cầu đã bị hủy");
       } else {
-        setError(err.message || "Failed to send message");
+        setError(err.message || "Không thể gửi tin nhắn");
       }
       console.error("Chat error:", err);
     } finally {
       setIsLoading(false);
+      setHasFirstChunk(false);
       abortControllerRef.current = null;
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -184,36 +159,44 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-violet-500 to-purple-600 p-4">
-      <Card className="flex flex-col w-full max-w-4xl mx-auto shadow-2xl">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-t-lg">
-          <h1 className="text-2xl font-bold text-center">RAG Chat Assistant</h1>
-          <p className="text-center text-violet-100 text-sm mt-1">
-            Powered by LangChain & Gemini
-          </p>
-        </div>
-
+    <div className="flex h-full p-6">
+      <div className="flex flex-col w-full max-w-5xl mx-auto overflow-hidden">
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+        <div className="flex-1 overflow-y-auto scroll-smooth p-6 space-y-4 custom-scrollbar" style={{ scrollbarWidth: "none" }}>
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
+              <div className="p-4 bg-accent rounded-xl border border-border">
+                <MessageSquare className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm text-foreground font-medium">
+                  Bắt đầu cuộc trò chuyện
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hỏi bất cứ điều gì bạn muốn biết...
+                </p>
+              </div>
+            </div>
+          )}
+
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"
+                }`}
             >
               <div
-                className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                  message.role === "user"
-                    ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white"
-                    : "bg-white text-gray-900 shadow-md border border-gray-200"
-                }`}
+                className={`max-w-[85%] md:max-w-[75%] rounded-lg p-4 ${message.role === "user"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-accent border border-border"
+                  }`}
               >
-                {/* <div className="whitespace-pre-wrap break-words">
+                {/* <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                   {message.content}
                 </div> */}
-                <MarkdownRenderer>{message.content}</MarkdownRenderer>
+                <MarkdownRenderer>
+                  {message.content}
+                </MarkdownRenderer>
               </div>
             </div>
           ))}
@@ -221,21 +204,21 @@ export default function ChatPage() {
           {/* Streaming Message */}
           {streamingContent && (
             <div className="flex justify-start">
-              <div className="max-w-[75%] rounded-2xl px-4 py-3 bg-white text-gray-900 shadow-md border border-gray-200">
-                <div className="whitespace-pre-wrap break-words">
+              <div className="max-w-[85%] md:max-w-[75%] rounded-lg p-4 bg-accent border border-border">
+                <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                   {streamingContent}
                 </div>
-                <div className="flex items-center gap-1 mt-2">
-                  <div className="w-2 h-2 bg-violet-600 rounded-full animate-bounce"></div>
+                {!hasFirstChunk && <div className="flex items-center gap-1 mt-3">
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></div>
                   <div
-                    className="w-2 h-2 bg-violet-600 rounded-full animate-bounce"
+                    className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"
                     style={{ animationDelay: "0.1s" }}
                   ></div>
                   <div
-                    className="w-2 h-2 bg-violet-600 rounded-full animate-bounce"
+                    className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"
                     style={{ animationDelay: "0.2s" }}
                   ></div>
-                </div>
+                </div>}
               </div>
             </div>
           )}
@@ -243,10 +226,10 @@ export default function ChatPage() {
           {/* Loading Indicator */}
           {isLoading && !streamingContent && (
             <div className="flex justify-start">
-              <div className="bg-white rounded-2xl px-4 py-3 shadow-md border border-gray-200">
+              <div className="bg-accent rounded-lg p-4 border border-border">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-violet-600" />
-                  <span className="text-gray-600 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="text-muted-foreground text-sm">
                     Đang suy nghĩ...
                   </span>
                 </div>
@@ -262,10 +245,10 @@ export default function ChatPage() {
           <div className="mx-6 mb-4">
             <Alert>
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5" />
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="font-medium">Error</p>
-                  <p className="text-sm">{error}</p>
+                  <p className="font-medium text-sm">Lỗi</p>
+                  <p className="text-xs mt-1 opacity-90">{error}</p>
                 </div>
               </div>
             </Alert>
@@ -273,7 +256,7 @@ export default function ChatPage() {
         )}
 
         {/* Input Area */}
-        <div className="p-6 bg-white border-t border-gray-200 rounded-b-lg">
+        <div className="p-6 ">
           <div className="flex gap-3">
             <Input
               value={input}
@@ -281,28 +264,29 @@ export default function ChatPage() {
               onKeyPress={handleKeyPress}
               placeholder="Nhập câu hỏi của bạn..."
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 focus:ring-0 focus:outline-0 focus:border-none"
             />
 
             {isLoading ? (
               <Button
                 onClick={stopStreaming}
-                className="bg-red-600 hover:bg-red-700 text-white px-6"
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-5"
               >
-                Dừng
+                <span className="hidden sm:inline">Dừng</span>
+                <span className="sm:hidden">●</span>
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
                 disabled={!input.trim()}
-                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-5"
               >
                 <Send className="w-4 h-4" />
               </Button>
             )}
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

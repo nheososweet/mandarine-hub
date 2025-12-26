@@ -131,7 +131,7 @@ export default function Dashboard() {
           <SpotlightCard
             key={i}
             className="bg-card! border border-border! rounded-xl p-5"
-            // spotlightColor="rgba(255,255,255,0.05)"
+          // spotlightColor="rgba(255,255,255,0.05)"
           >
             <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-accent rounded-lg border border-border">
@@ -293,13 +293,12 @@ export default function Dashboard() {
             >
               <div className="flex items-center gap-4">
                 <div
-                  className={`p-1.5 rounded-full ${
-                    act.status === "success"
+                  className={`p-1.5 rounded-full ${act.status === "success"
                       ? "bg-chart-4/10 text-chart-4"
                       : act.status === "warning"
-                      ? "bg-destructive/10 text-destructive"
-                      : "bg-chart-2/10 text-chart-2"
-                  }`}
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-chart-2/10 text-chart-2"
+                    }`}
                 >
                   {act.status === "success" ? (
                     <TrendingUp className="w-3 h-3" />
