@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import * as React from 'react';
 import {
     Sheet,
     SheetContent,
@@ -8,155 +8,212 @@ import {
     SheetTitle,
     SheetDescription,
 } from "@/components/ui/sheet";
-import { Loader2, FileText, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// --- REACT PDF IMPORTS ---
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
-import Mark from "mark.js";
+// --- REACT PDF VIEWER IMPORTS ---
+// Following official docs: https://react-pdf-viewer.dev/plugins/highlight/
+import { Viewer, Worker } from '@react-pdf-viewer/core';
+import { 
+    highlightPlugin, 
+    Trigger,
+    type HighlightArea,
+    type RenderHighlightsProps 
+} from '@react-pdf-viewer/highlight';
+import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 
-// Cấu hình Worker từ CDN (Để tránh lỗi build trong Next.js)
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url,
-).toString();
+// Import required CSS
+import '@react-pdf-viewer/core/lib/styles/index.css';
+import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+import '@react-pdf-viewer/highlight/lib/styles/index.css';
+
+/**
+ * HighlightArea interface from react-pdf-viewer:
+ * {
+ *   pageIndex: number;  // Zero-based page index
+ *   left: number;       // Percentage from left (0-100)
+ *   top: number;        // Percentage from top (0-100)
+ *   width: number;      // Width as percentage
+ *   height: number;     // Height as percentage
+ * }
+ */
 
 interface DocumentPreviewSheetProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    fileName: string;     // Tên file PDF (ví dụ: "so-tay-nhan-vien.pdf")
-    highlights: string[]; // List các đoạn text cần highlight
+    fileUrl: string;                    // URL to PDF file (e.g., /static/document.pdf)
+    highlightAreas: HighlightArea[];    // Array of highlight rectangles from backend
+    initialPage?: number;               // Zero-based page index to scroll to
 }
 
 export function DocumentPreviewSheet({
     open,
     onOpenChange,
-    fileName,
-    highlights,
+    fileUrl,
+    highlightAreas,
+    initialPage = 0,
 }: DocumentPreviewSheetProps) {
-    const [numPages, setNumPages] = useState<number>(0);
-    const [pageNumber, setPageNumber] = useState<number>(1);
-    const [loading, setLoading] = useState(false);
+    
+    /**
+     * Render highlight areas using the highlight plugin.
+     * 
+     * Key points from documentation:
+     * 1. renderHighlights is called for EACH page during render
+     * 2. We must filter areas by props.pageIndex
+     * 3. Use props.getCssProperties(area, props.rotation) for proper positioning
+     * 4. This handles zoom and rotation automatically
+     */
+    const renderHighlights = React.useCallback(
+        (props: RenderHighlightsProps) => (
+            <div>
+                {highlightAreas
+                    // Filter: Only render highlights for current page
+                    .filter((area) => area.pageIndex === props.pageIndex)
+                    .map((area, idx) => (
+                        <div
+                            key={`highlight-${props.pageIndex}-${idx}`}
+                            className="highlight-area"
+                            style={Object.assign(
+                                {},
+                                {
+                                    // Highlight styling
+                                    background: 'rgba(255, 235, 59, 0.4)',  // Yellow with transparency
+                                    borderRadius: '2px',
+                                    // Allow text selection through highlight
+                                    pointerEvents: 'none' as const,
+                                    // Mix blend for better readability
+                                    mixBlendMode: 'multiply' as const,
+                                },
+                                // CRITICAL: getCssProperties calculates exact position
+                                // accounting for zoom level and page rotation
+                                props.getCssProperties(area, props.rotation)
+                            )}
+                        />
+                    ))}
+            </div>
+        ),
+        [highlightAreas]
+    );
 
-    // Ref bao quanh vùng hiển thị PDF
-    const pdfWrapperRef = useRef<HTMLDivElement>(null);
+    /**
+     * Create highlight plugin instance.
+     * 
+     * Trigger.None: Disable user text selection highlighting
+     * We only want to show backend-provided highlights
+     */
+    const highlightPluginInstance = React.useMemo(
+        () => highlightPlugin({
+            renderHighlights,
+            trigger: Trigger.None,  // Don't trigger on user selection
+        }),
+        [renderHighlights]
+    );
 
-    // Reset trang về 1 khi mở file mới
-    useEffect(() => {
-        if (open) {
-            setPageNumber(1);
-        }
-    }, [open, fileName]);
+    /**
+     * Default layout plugin for toolbar, sidebar, etc.
+     */
+    const defaultLayoutPluginInstance = React.useMemo(
+        () => defaultLayoutPlugin(),
+        []
+    );
 
-    function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-        setNumPages(numPages);
-        setLoading(false);
-    }
+    /**
+     * Jump to highlight area when clicking sidebar items.
+     * Exposed by highlightPluginInstance.
+     */
+    const { jumpToHighlightArea } = highlightPluginInstance;
 
-    // --- LOGIC HIGHLIGHT ---
-    // Hàm này được gọi tự động sau khi PDF render xong text layer của 1 trang
-    const handleTextLayerRendered = useCallback(() => {
-        if (!pdfWrapperRef.current || !highlights || highlights.length === 0) return;
-
-        // Tìm lớp text layer mà react-pdf vừa tạo ra
-        const textLayer = pdfWrapperRef.current.querySelector(".react-pdf__Page__textContent");
-        if (!textLayer) return;
-
-        const instance = new Mark(textLayer as HTMLElement);
-
-        // Clean keywords: Bỏ xuống dòng thừa, chuẩn hóa khoảng trắng
-        const keywords = highlights.map(chunk =>
-            chunk.replace(/\s+/g, " ").trim()
-        );
-
-        console.log("🔍 Đang tìm highlight trên trang", pageNumber, "với keywords:", keywords);
-
-        instance.mark(keywords, {
-            element: "span",
-            className: "bg-yellow-300/50 text-transparent cursor-pointer mix-blend-multiply", // Style highlight
-            accuracy: "partially",
-            separateWordSearch: false,
-            acrossElements: true, // Cho phép tìm text trải dài qua nhiều dòng
-            caseSensitive: false,
-            ignorePunctuation: [",", ".", "-", ":", "\"", "'"],
+    // Group highlights by page for sidebar display
+    const highlightsByPage = React.useMemo(() => {
+        const grouped: Record<number, HighlightArea[]> = {};
+        highlightAreas.forEach((area) => {
+            if (!grouped[area.pageIndex]) {
+                grouped[area.pageIndex] = [];
+            }
+            grouped[area.pageIndex].push(area);
         });
-    }, [highlights, pageNumber]);
+        return grouped;
+    }, [highlightAreas]);
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-[90%] sm:max-w-[1000px] p-0 flex flex-col bg-zinc-100 dark:bg-zinc-900">
-
-                {/* HEADER */}
-                <SheetHeader className="p-4 border-b bg-white dark:bg-zinc-950 shrink-0 flex flex-row items-center justify-between space-y-0">
-                    <div className="flex flex-col gap-1">
-                        <SheetTitle className="flex items-center gap-2 text-base">
-                            <FileText className="w-4 h-4 text-red-600" /> {/* Icon đỏ cho PDF */}
-                            <span className="truncate max-w-[400px]">{fileName}</span>
-                        </SheetTitle>
-                        <SheetDescription className="text-xs">
-                            Trang {pageNumber} / {numPages || "--"}
-                        </SheetDescription>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            disabled={pageNumber <= 1}
-                            onClick={() => setPageNumber((prev) => prev - 1)}
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </Button>
-                        <span className="text-sm font-medium w-12 text-center">
-                            {pageNumber}
+            <SheetContent 
+                className="w-[95%] sm:max-w-[1400px] p-0 flex flex-col bg-zinc-100 dark:bg-zinc-900 border-l"
+            >
+                {/* Header */}
+                <SheetHeader className="p-4 border-b bg-white dark:bg-zinc-950 shrink-0">
+                    <SheetTitle className="flex items-center gap-2 text-base">
+                        <FileText className="w-4 h-4 text-red-600" />
+                        <span className="truncate">{fileUrl.split('/').pop()}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                            ({highlightAreas.length} highlights)
                         </span>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            disabled={pageNumber >= numPages}
-                            onClick={() => setPageNumber((prev) => prev + 1)}
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </Button>
-                    </div>
+                    </SheetTitle>
+                    <SheetDescription>
+                        Xem tài liệu với các vùng highlight từ nguồn tham chiếu
+                    </SheetDescription>
                 </SheetHeader>
 
-                {/* PDF VIEWPORT */}
-                <div className="flex-1 overflow-auto p-4 flex justify-center bg-zinc-100 dark:bg-zinc-900 relative">
+                {/* Main Content: Sidebar + Viewer */}
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Highlights Sidebar */}
+                    <div className="w-48 border-r bg-white dark:bg-zinc-950 overflow-y-auto shrink-0">
+                        <div className="p-3 border-b">
+                            <h3 className="text-sm font-medium">Highlights</h3>
+                        </div>
+                        <div className="p-2 space-y-1">
+                            {Object.keys(highlightsByPage).length === 0 ? (
+                                <p className="text-xs text-muted-foreground p-2">
+                                    Không có highlight
+                                </p>
+                            ) : (
+                                Object.entries(highlightsByPage).map(([pageIdx, areas]) => (
+                                    <Button
+                                        key={pageIdx}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full justify-start text-xs h-8"
+                                        onClick={() => {
+                                            // Jump to first highlight on this page
+                                            if (areas.length > 0) {
+                                                jumpToHighlightArea(areas[0]);
+                                            }
+                                        }}
+                                    >
+                                        <span className="truncate">
+                                            Trang {parseInt(pageIdx) + 1} ({areas.length})
+                                        </span>
+                                    </Button>
+                                ))
+                            )}
+                        </div>
+                    </div>
 
-                    {/* Wrapper Ref để Mark.js tìm scope */}
-                    <div ref={pdfWrapperRef} className="shadow-lg">
-                        <Document
-                            // Thay đổi đường dẫn file PDF của bạn ở đây
-                            file={`${fileName}`}
-                            onLoadSuccess={onDocumentLoadSuccess}
-                            loading={
-                                <div className="flex flex-col items-center gap-2 mt-20">
-                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                                    <p className="text-sm text-muted-foreground">Đang tải PDF...</p>
-                                </div>
-                            }
-                            error={
-                                <div className="mt-20 text-red-500 text-center px-4">
-                                    Không thể tải file PDF. Hãy kiểm tra đường dẫn file: /documents/{fileName}
-                                </div>
-                            }
-                        >
-                            <Page
-                                pageNumber={pageNumber}
-                                width={850} // Kích thước cố định hoặc tính toán theo window width
-                                renderTextLayer={true} // Bắt buộc TRUE để Mark.js hoạt động
-                                renderAnnotationLayer={false}
-                                onRenderSuccess={handleTextLayerRendered} // Trigger highlight sau khi render xong
-                                className="bg-white"
-                            />
-                        </Document>
+                    {/* PDF Viewer */}
+                    <div className="flex-1 overflow-hidden">
+                        {/* 
+                         * Worker URL must match pdfjs-dist version.
+                         * Check package.json for installed version.
+                         */}
+                        <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+                            <div style={{ height: '100%', width: '100%' }}>
+                                <Viewer
+                                    fileUrl={fileUrl}
+                                    initialPage={initialPage}
+                                    plugins={[
+                                        defaultLayoutPluginInstance,
+                                        highlightPluginInstance,
+                                    ]}
+                                    defaultScale={1}
+                                />
+                            </div>
+                        </Worker>
                     </div>
                 </div>
             </SheetContent>
         </Sheet>
     );
 }
+
+// Re-export HighlightArea type for convenience
+export type { HighlightArea };
