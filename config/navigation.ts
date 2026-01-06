@@ -19,6 +19,7 @@ import {
   LogOut,
   User,
   type LucideIcon,
+  Highlighter,
 } from "lucide-react";
 
 export interface NavItem {
@@ -51,23 +52,33 @@ export const navigationGroups: NavGroup[] = [
         icon: LayoutDashboard,
       },
       {
-        title: "AI Chat",
+        title:"RAG",
+        url: "/rag",
+        icon: FileText,
+      },
+       {
+        title:"PDF Highlighter",
+        url: "/pdf-highlighter",
+        icon: Highlighter,
+      },
+      {
+        title: "Agno Chat",
         url: "/chat",
         icon: MessageSquare,
       },
       {
         title: "Knowledge Base",
-        url: "/knowledge",
+        url: "#",
         icon: Database,
       },
       {
         title: "Agents",
-        url: "/agents",
+        url: "#",
         icon: Bot,
       },
       {
         title: "Workflows",
-        url: "/workflows",
+    url: "#",
         icon: Workflow,
       },
     ],
@@ -77,23 +88,23 @@ export const navigationGroups: NavGroup[] = [
     items: [
       {
         title: "Settings",
-        url: "/settings",
+     url: "#",
         icon: Settings2,
         items: [
-          { title: "General", url: "/settings/general" },
-          { title: "Appearance", url: "/settings/appearance" },
-          { title: "Notifications", url: "/settings/notifications" },
-          { title: "Security", url: "/settings/security" },
+          { title: "General",  url: "#", },
+          { title: "Appearance", url: "#", },
+          { title: "Notifications", url: "#", },
+          { title: "Security", url: "#", },
         ],
       },
       {
         title: "API Keys",
-        url: "/api-keys",
+        url: "#",
         icon: Key,
       },
       {
         title: "Team",
-        url: "/team",
+        url: "#",
         icon: Users,
       },
     ],
@@ -104,12 +115,12 @@ export const navigationGroups: NavGroup[] = [
 export const secondaryNav = [
   {
     title: "Documentation",
-    url: "/docs",
+    url: "#",
     icon: BookOpen,
   },
   {
     title: "Help & Support",
-    url: "/support",
+    url: "#",
     icon: LifeBuoy,
   },
 ];
@@ -128,23 +139,23 @@ export const userMenuItems: UserMenuItem[] = [
   {
     label: "Profile",
     icon: User,
-    url: "/profile",
+    url: "#",
   },
   {
     label: "Billing",
     icon: CreditCard,
-    url: "/billing",
+    url: "#",
   },
   {
     label: "Settings",
     icon: Settings2,
-    url: "/settings",
+    url: "#",
     separator: true,
   },
   {
     label: "Support",
     icon: LifeBuoy,
-    url: "/support",
+    url: "#",
   },
   {
     label: "Sign out",
