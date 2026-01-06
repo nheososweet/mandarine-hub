@@ -8,7 +8,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, FileCode, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Viewer, Worker } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
@@ -20,6 +21,86 @@ import {
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import "@react-pdf-viewer/highlight/lib/styles/index.css";
+import { Badge } from "@/components/ui/badge"; // Nếu chưa có component Badge thì dùng div class tương đương
+import {
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import MarkdownRenderer from "@/components/ui/typography/MarkdownRenderer";
+
+const ChunkCard = ({
+  chunk,
+  index,
+}: {
+  chunk: RetrievedChunk;
+  index: number;
+}) => {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(chunk.text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="group flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:border-primary/50 hover:shadow-md">
+      {/* Header của Chunk */}
+      <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3">
+        <div className="flex items-center gap-3">
+          {/* Số thứ tự Chunk */}
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            {index + 1}
+          </div>
+          {/* Tên file nguồn */}
+          <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>{chunk.source}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Số trang */}
+          <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium text-foreground transition-colors border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
+            Page {chunk.page}
+          </span>
+
+          {/* Nút Copy */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-primary"
+            onClick={handleCopy}
+            title="Copy text"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-green-500" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Nội dung text */}
+      <div className="p-4 text-sm leading-7 text-muted-foreground">
+        {/* whitespace-pre-wrap: Giữ nguyên xuống dòng từ data */}
+        <p className="whitespace-pre-wrap font-normal">{chunk.text}</p>
+        {/* <MarkdownRenderer>{chunk.text}</MarkdownRenderer> */}
+        {/* <MessageContent>
+          <MessageResponse>{chunk.text}</MessageResponse>
+        </MessageContent> */}
+      </div>
+
+      {/* Footer nhỏ hiển thị ID (tùy chọn, dùng để debug) */}
+      <div className="px-4 pb-2">
+        <p className="text-[10px] text-muted-foreground/40 font-mono">
+          ID: {chunk.id}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 interface Note {
   id: number;
@@ -28,83 +109,62 @@ interface Note {
   quote: string;
 }
 
+export interface RetrievedChunk {
+  id: string;
+  text: string;
+  source: string;
+  page: number;
+}
+
 interface DocumentPreviewSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  fileUrl?: string;
+  highlightAreas?: HighlightArea[];
+  initialPage?: number;
+  documentTitle?: string;
+  retrievedChunks?: RetrievedChunk[];
 }
 
 export default function DocumentPreviewSheet({
   open,
   onOpenChange,
+  fileUrl = "/noiquy.pdf",
+  highlightAreas = [],
+  initialPage = 0,
+  documentTitle = "Document",
+  retrievedChunks = [],
 }: DocumentPreviewSheetProps) {
-  const [notes, setNotes] = React.useState<Note[]>([
-    {
-      id: 1,
-      content: "Đây là ghi chú quan trọng về điều khoản đầu tiên",
-      highlightAreas: [
-        {
-          left: 10,
-          top: 15,
-          width: 50,
-          height: 5,
-          pageIndex: 0,
-        },
-      ],
-      quote: "Điều khoản và điều kiện",
-    },
-    {
-      id: 2,
-      content: "Cần chú ý đến phần này khi ký hợp đồng",
-      highlightAreas: [
-        {
-          left: 5,
-          top: 35,
-          width: 70,
-          height: 8,
-          pageIndex: 0,
-        },
-      ],
-      quote: "Trách nhiệm của bên A",
-    },
-    {
-      id: 3,
-      content: "Điểm quyết định trong thỏa thuận",
-      highlightAreas: [
-        {
-          left: 15,
-          top: 60,
-          width: 60,
-          height: 6,
-          pageIndex: 0,
-        },
-      ],
-      quote: "Quyền lợi bên B",
-    },
-  ]);
+  console.log("Retrieved Chunks:", retrievedChunks);
+  // Convert highlightAreas to internal format for rendering
+  const highlights = React.useMemo(() => {
+    return highlightAreas.map((area, idx) => ({
+      id: idx,
+      content: `Highlight on page ${area.pageIndex + 1}`,
+      highlightAreas: [area],
+      quote: "",
+    }));
+  }, [highlightAreas]);
 
   const renderHighlights = (props: any) => (
     <div>
-      {notes.map((note) => (
-        <React.Fragment key={note.id}>
-          {note.highlightAreas
-            .filter((area) => area.pageIndex === props.pageIndex)
-            .map((area, idx) => (
-              <div
-                key={idx}
-                style={Object.assign(
-                  {},
-                  {
-                    background: "yellow",
-                    opacity: 0.3,
-                    cursor: "pointer",
-                  },
-                  props.getCssProperties(area, props.rotation)
-                )}
-                title={note.content}
-              />
-            ))}
-        </React.Fragment>
-      ))}
+      {highlightAreas
+        .filter((area) => area.pageIndex === props.pageIndex)
+        .map((area, idx) => (
+          <div
+            key={idx}
+            style={Object.assign(
+              {},
+              {
+                background: "yellow",
+                opacity: 0.4,
+                cursor: "pointer",
+              },
+              props.getCssProperties(area, props.rotation)
+            )}
+            title={`Page ${area.pageIndex + 1}`}
+          />
+        ))}
     </div>
   );
 
@@ -115,9 +175,11 @@ export default function DocumentPreviewSheet({
 
   const sidebarNotes = (
     <div style={{ padding: "10px", overflow: "auto", height: "100%" }}>
-      <h3 style={{ marginBottom: "10px" }}>Ghi chú ({notes.length})</h3>
-      {notes.length === 0 && <div>Không có ghi chú</div>}
-      {notes.map((note) => (
+      <h3 style={{ marginBottom: "10px" }}>
+        Highlights ({highlightAreas.length})
+      </h3>
+      {highlightAreas.length === 0 && <div>No highlights available</div>}
+      {highlights.map((note) => (
         <div
           key={note.id}
           style={{
@@ -133,16 +195,6 @@ export default function DocumentPreviewSheet({
             defaultLayoutPluginInstance.activateTab(3);
           }}
         >
-          <blockquote
-            style={{
-              marginTop: 0,
-              marginBottom: "5px",
-              fontStyle: "italic",
-              color: "#666",
-            }}
-          >
-            "{note.quote}"
-          </blockquote>
           <p style={{ margin: 0, fontSize: "14px" }}>{note.content}</p>
         </div>
       ))}
@@ -154,7 +206,7 @@ export default function DocumentPreviewSheet({
       defaultTabs.concat({
         content: sidebarNotes,
         icon: <MessageIcon />,
-        title: "Ghi chú",
+        title: "Highlights",
       }),
   });
 
@@ -164,23 +216,74 @@ export default function DocumentPreviewSheet({
         {/* Header */}
         <SheetHeader className="p-4 border-b bg-white dark:bg-zinc-950 shrink-0">
           <SheetTitle className="flex items-center gap-2 text-base">
-            Title
+            {documentTitle}
           </SheetTitle>
           <SheetDescription>
-            Xem tài liệu với các vùng highlight từ nguồn tham chiếu
+            View document with highlighted source references
           </SheetDescription>
         </SheetHeader>
-        <div className="flex-1 overflow-hidden">
-          <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
-            <Viewer
-              fileUrl="/noiquy.pdf"
-              plugins={[
-                defaultLayoutPluginInstanceWithTabs,
-                highlightPluginInstance,
-              ]}
-            />
-          </Worker>
-        </div>
+
+        {/* Tabs for PDF Viewer and Raw Text */}
+        <Tabs
+          defaultValue="pdf"
+          className="flex-1 flex flex-col overflow-hidden"
+        >
+          <TabsList className="mx-4 mt-2 w-fit">
+            <TabsTrigger value="pdf" className="gap-2">
+              <FileText className="w-4 h-4" />
+              PDF Viewer
+            </TabsTrigger>
+            <TabsTrigger value="raw" className="gap-2">
+              <FileCode className="w-4 h-4" />
+              Raw Retrieved Docs
+            </TabsTrigger>
+          </TabsList>
+
+          {/* PDF Viewer Tab */}
+          <TabsContent value="pdf" className="flex-1 overflow-hidden m-4 mt-2">
+            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
+              <Viewer
+                fileUrl={"/noiquy.pdf"}
+                initialPage={initialPage}
+                plugins={[
+                  defaultLayoutPluginInstanceWithTabs,
+                  highlightPluginInstance,
+                ]}
+              />
+            </Worker>
+          </TabsContent>
+
+          {/* Raw Text Tab */}
+          <TabsContent
+            value="raw"
+            className="flex-1 overflow-auto m-4 mt-2 pr-2"
+          >
+            <div className="space-y-4 pb-8">
+              {/* Header nhỏ cho list */}
+              <div className="flex items-center justify-between pb-2">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Found {retrievedChunks.length} chunks
+                </h3>
+              </div>
+
+              {retrievedChunks.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground animate-in fade-in-50">
+                  <div className="rounded-full bg-muted p-3 mb-4">
+                    <FileCode className="h-6 w-6 text-muted-foreground/50" />
+                  </div>
+                  <p>No retrieved chunks available</p>
+                </div>
+              )}
+
+              {/* Render danh sách chunk */}
+              <div className="grid gap-4">
+                {retrievedChunks.map((chunk, idx) => (
+                  <ChunkCard key={chunk.id} chunk={chunk} index={idx} />
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

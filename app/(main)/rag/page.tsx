@@ -41,7 +41,9 @@ import { nanoid } from "nanoid";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import DocumentPreviewSheet from "./_components/DocumentPreviewSheet";
+import DocumentPreviewSheet, {
+  RetrievedChunk,
+} from "./_components/DocumentPreviewSheet";
 
 type MessageType = {
   key: string;
@@ -87,6 +89,11 @@ export default function ChatPage() {
     initialPage: number;
   } | null>(null);
 
+  // Store highlights received from backend (map of fileUrl -> highlights)
+  const [highlightsMap, setHighlightsMap] = useState<Record<string, any[]>>({});
+  const [retrievedChunksMap, setRetrievedChunksMap] = useState<
+    RetrievedChunk[]
+  >([]);
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -94,45 +101,38 @@ export default function ChatPage() {
    * Handle opening the document preview with highlights.
    *
    * Flow:
-   * 1. Get all sources for the target file
-   * 2. Collect all highlight areas from those sources
+   * 1. Get file URL from source
+   * 2. Fetch highlights from highlightsMap (received from backend)
    * 3. Determine initial page from first highlight
    * 4. Open the preview sheet
    */
-  const handleOpenPreview = (sources: any[]) => {
-    if (!sources || sources.length === 0) return;
+  const handleOpenPreview = (source: any) => {
+    if (!source || !source.url) return;
 
-    // Get the first source's file info
-    const targetFile = sources[0].source;
-    const fileUrl = sources[0].url || `/static/${targetFile}`;
+    const fileUrl = source.url;
 
-    // Collect all highlight areas from all sources of this file
-    const allHighlights: any[] = [];
+    // Get highlights for this file from the map
+    const fileHighlights = highlightsMap[fileUrl] || [];
+
+    // Determine initial page - use source.page if available, otherwise first highlight
     let firstPageIndex = 0;
-
-    sources
-      .filter((s) => s.source === targetFile)
-      .forEach((source) => {
-        if (source.highlights && Array.isArray(source.highlights)) {
-          allHighlights.push(...source.highlights);
-
-          // Get first page index for initial scroll
-          if (source.highlights.length > 0 && firstPageIndex === 0) {
-            firstPageIndex = source.highlights[0].pageIndex;
-          }
-        }
-      });
+    if (source.page && source.page > 0) {
+      firstPageIndex = source.page - 1; // Convert 1-based to 0-based
+    } else if (fileHighlights.length > 0) {
+      firstPageIndex = fileHighlights[0].pageIndex;
+    }
 
     console.log("📍 Opening preview with highlights:", {
       fileUrl,
-      highlightCount: allHighlights.length,
+      highlightCount: fileHighlights.length,
       firstPageIndex,
-      highlights: allHighlights,
+      sourcePage: source.page,
+      highlights: fileHighlights,
     });
 
     setPreviewData({
       fileUrl,
-      highlightAreas: allHighlights,
+      highlightAreas: fileHighlights,
       initialPage: firstPageIndex,
     });
     setPreviewOpen(true);
@@ -186,6 +186,8 @@ export default function ChatPage() {
 
       let accumulatedContent = "";
       let accumulatedSources: any[] = [];
+      let receivedHighlights: Record<string, any[]> = {};
+      let receivedRetrievedDocs: RetrievedChunk[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -228,7 +230,7 @@ export default function ChatPage() {
               }
 
               // --- CASE 2: Handle Sources ---
-              // Backend Format: {"sources": [{"source": "...", "content": "..."}, ...]}
+              // Backend Format: {"sources": [{"source": "...", "content": "...", "url": "..."}, ...]}
               if (parsed.sources) {
                 accumulatedSources = parsed.sources;
 
@@ -243,6 +245,20 @@ export default function ChatPage() {
                     return msg;
                   })
                 );
+              }
+
+              // --- CASE 3: Handle Highlights (sent separately in last chunk) ---
+              // Backend Format: {"highlights": {"fileUrl": [{pageIndex, left, top, width, height}, ...]}}
+              if (parsed.highlights) {
+                receivedHighlights = parsed.highlights;
+                setHighlightsMap(receivedHighlights);
+                console.log("✨ Received highlights:", receivedHighlights);
+              }
+
+              if (parsed.retrievedChunks) {
+                receivedRetrievedDocs = parsed.retrievedChunks;
+                setRetrievedChunksMap(receivedRetrievedDocs);
+                console.log("✨ Received highlights:", receivedHighlights);
               }
             } catch (parseError) {
               // Ignore non-json lines or keepalive chunks
@@ -278,12 +294,19 @@ export default function ChatPage() {
   return (
     <div className="h-full relative">
       {/* --- Document Preview Sheet Component --- */}
-      {previewData && (
-        <DocumentPreviewSheet
-          open={previewOpen}
-          onOpenChange={setPreviewOpen}
-        />
-      )}
+      <DocumentPreviewSheet
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        fileUrl={previewData?.fileUrl}
+        highlightAreas={previewData?.highlightAreas}
+        retrievedChunks={retrievedChunksMap}
+        initialPage={previewData?.initialPage}
+        documentTitle={
+          previewData?.fileUrl
+            ? previewData.fileUrl.split("/").pop() || "Document"
+            : "Document"
+        }
+      />
 
       <div className="relative flex h-[calc(100vh-3.5rem)] flex-col w-full max-w-5xl mx-auto overflow-hidden">
         {/* --- Conversation Area --- */}
@@ -319,11 +342,11 @@ export default function ChatPage() {
                                 size="sm"
                                 className="h-8 text-xs font-normal gap-2 text-muted-foreground hover:text-primary transition-all"
                                 onClick={() =>
-                                  handleOpenPreview(message.sources!)
+                                  handleOpenPreview(message.sources![0])
                                 }
                               >
                                 <FileTextIcon className="w-3.5 h-3.5" />
-                                Mở tài liệu tham chiếu:{" "}
+                                Open document reference:{" "}
                                 <span className="font-medium text-foreground">
                                   {message.sources[0].source}
                                 </span>
