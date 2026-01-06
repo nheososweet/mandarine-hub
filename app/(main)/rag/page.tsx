@@ -41,7 +41,7 @@ import { nanoid } from "nanoid";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { DocumentPreviewSheet } from "./_components/DocumentPreviewSheet";
+import DocumentPreviewSheet from "./_components/DocumentPreviewSheet";
 
 type MessageType = {
   key: string;
