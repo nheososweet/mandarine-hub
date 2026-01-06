@@ -14,11 +14,11 @@ import { Button } from "@/components/ui/button";
 // --- REACT PDF VIEWER IMPORTS ---
 // Following official docs: https://react-pdf-viewer.dev/plugins/highlight/
 import { Viewer, Worker } from '@react-pdf-viewer/core';
-import { 
-    highlightPlugin, 
+import {
+    highlightPlugin,
     Trigger,
     type HighlightArea,
-    type RenderHighlightsProps 
+    type RenderHighlightsProps
 } from '@react-pdf-viewer/highlight';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 
@@ -53,7 +53,7 @@ export function DocumentPreviewSheet({
     highlightAreas,
     initialPage = 0,
 }: DocumentPreviewSheetProps) {
-    
+
     /**
      * Render highlight areas using the highlight plugin.
      * 
@@ -137,7 +137,7 @@ export function DocumentPreviewSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent 
+            <SheetContent
                 className="w-[95%] sm:max-w-[1400px] p-0 flex flex-col bg-zinc-100 dark:bg-zinc-900 border-l"
             >
                 {/* Header */}
@@ -198,7 +198,7 @@ export function DocumentPreviewSheet({
                         <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
                             <div style={{ height: '100%', width: '100%' }}>
                                 <Viewer
-                                    fileUrl={fileUrl}
+                                    fileUrl={"/noiquy.pdf"}
                                     initialPage={initialPage}
                                     plugins={[
                                         defaultLayoutPluginInstance,
