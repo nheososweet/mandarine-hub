@@ -59,7 +59,28 @@ importers:
       '@react-pdf-viewer/default-layout':
         specifier: ^3.12.0
         version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@react-pdf-viewer/full-screen':
+        specifier: ^3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@react-pdf-viewer/get-file':
+        specifier: ^3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@react-pdf-viewer/highlight':
+        specifier: ^3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@react-pdf-viewer/page-navigation':
+        specifier: ^3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@react-pdf-viewer/print':
+        specifier: ^3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@react-pdf-viewer/rotate':
+        specifier: ^3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@react-pdf-viewer/theme':
+        specifier: ^3.12.0
+        version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@react-pdf-viewer/toolbar':
         specifier: ^3.12.0
         version: 3.12.0(pdfjs-dist@3.4.120)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@xyflow/react':

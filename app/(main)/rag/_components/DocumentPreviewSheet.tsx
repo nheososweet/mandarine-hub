@@ -13,6 +13,10 @@ import { FileText, FileCode, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Viewer, Worker } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
+import type { ToolbarSlot, TransformToolbarSlot } from '@react-pdf-viewer/toolbar';
+import { toolbarPlugin } from '@react-pdf-viewer/toolbar';
+import { fullScreenPlugin } from '@react-pdf-viewer/full-screen';
+
 import {
   highlightPlugin,
   HighlightArea,
@@ -21,12 +25,11 @@ import {
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import "@react-pdf-viewer/highlight/lib/styles/index.css";
-import { Badge } from "@/components/ui/badge"; // Nếu chưa có component Badge thì dùng div class tương đương
-import {
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
-import MarkdownRenderer from "@/components/ui/typography/MarkdownRenderer";
+import '@react-pdf-viewer/zoom/lib/styles/index.css';
+import '@react-pdf-viewer/toolbar/lib/styles/index.css';
+import '@react-pdf-viewer/print/lib/styles/index.css';
+import '@react-pdf-viewer/page-navigation/lib/styles/index.css';
+import '@react-pdf-viewer/full-screen/lib/styles/index.css';
 
 const ChunkCard = ({
   chunk,
@@ -168,7 +171,38 @@ export default function DocumentPreviewSheet({
     </div>
   );
 
-  const defaultLayoutPluginInstance = defaultLayoutPlugin();
+  // Transform toolbar to remove Open File button
+  const transform: TransformToolbarSlot = (slot: ToolbarSlot) => ({
+    ...slot,
+    // Remove Open File button from toolbar and menu
+    Open: () => <></>,
+    OpenMenuItem: () => <></>,
+  });
+
+  // Initialize plugins
+  const toolbarPluginInstance = toolbarPlugin();
+  const { renderDefaultToolbar, Toolbar } = toolbarPluginInstance;
+
+  const fullScreenPluginInstance = fullScreenPlugin({
+    // Enable keyboard shortcuts (Ctrl+Cmd+F on macOS, F11 on other OS)
+    enableShortcuts: true,
+  });
+
+  const defaultLayoutPluginInstance = defaultLayoutPlugin({
+    sidebarTabs: (defaultTabs) => [
+      defaultTabs[0],  // Giữ tab Thumbnails (trang nhỏ)
+      {
+        content: sidebarNotes,
+        icon: <MessageIcon />,
+        title: "Highlights",
+      },
+    ],
+    // Custom toolbar without Open File button
+    renderToolbar: (Toolbar) => (
+      <Toolbar>{renderDefaultToolbar(transform)}</Toolbar>
+    ),
+  });
+
   const highlightPluginInstance = highlightPlugin({
     renderHighlights,
   });
@@ -201,14 +235,16 @@ export default function DocumentPreviewSheet({
     </div>
   );
 
-  const defaultLayoutPluginInstanceWithTabs = defaultLayoutPlugin({
-    sidebarTabs: (defaultTabs) =>
-      defaultTabs.concat({
-        content: sidebarNotes,
-        icon: <MessageIcon />,
-        title: "Highlights",
-      }),
-  });
+  // const defaultLayoutPluginInstanceWithTabs = defaultLayoutPlugin({
+  //   sidebarTabs: (defaultTabs) =>
+  //     defaultTabs.concat({
+  //       content: sidebarNotes,
+  //       icon: <MessageIcon />,
+  //       title: "Highlights",
+  //     }),
+  // });
+
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -244,10 +280,14 @@ export default function DocumentPreviewSheet({
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
               <Viewer
                 fileUrl={"/noiquy.pdf"}
-                initialPage={initialPage}
+                // initialPage={initialPage}
+                initialPage={0}
+
                 plugins={[
-                  defaultLayoutPluginInstanceWithTabs,
+                  defaultLayoutPluginInstance,
                   highlightPluginInstance,
+                  toolbarPluginInstance,
+                  fullScreenPluginInstance,
                 ]}
               />
             </Worker>

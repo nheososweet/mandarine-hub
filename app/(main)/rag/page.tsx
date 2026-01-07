@@ -44,6 +44,7 @@ import { Button } from "@/components/ui/button";
 import DocumentPreviewSheet, {
   RetrievedChunk,
 } from "./_components/DocumentPreviewSheet";
+import ChatBlankState from "@/components/chat/ChatArea/Messages/ChatBlankState";
 
 type MessageType = {
   key: string;
@@ -314,7 +315,7 @@ export default function ChatPage() {
           <ConversationContent>
             {messages.length === 0 && (
               <div className="flex h-full flex-col items-center justify-center space-y-4 p-8 text-muted-foreground">
-                <p className="text-lg font-medium">Chat với Tài liệu Sphinx</p>
+                <ChatBlankState />
               </div>
             )}
 

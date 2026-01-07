@@ -52,15 +52,15 @@ export const navigationGroups: NavGroup[] = [
         icon: LayoutDashboard,
       },
       {
-        title:"RAG",
+        title: "RAG",
         url: "/rag",
         icon: FileText,
       },
-       {
-        title:"PDF Highlighter",
-        url: "/pdf-highlighter",
-        icon: Highlighter,
-      },
+      //  {
+      //   title:"PDF Highlighter",
+      //   url: "/pdf-highlighter",
+      //   icon: Highlighter,
+      // },
       {
         title: "Agno Chat",
         url: "/chat",
@@ -78,7 +78,7 @@ export const navigationGroups: NavGroup[] = [
       },
       {
         title: "Workflows",
-    url: "#",
+        url: "#",
         icon: Workflow,
       },
     ],
@@ -88,10 +88,10 @@ export const navigationGroups: NavGroup[] = [
     items: [
       {
         title: "Settings",
-     url: "#",
+        url: "#",
         icon: Settings2,
         items: [
-          { title: "General",  url: "#", },
+          { title: "General", url: "#", },
           { title: "Appearance", url: "#", },
           { title: "Notifications", url: "#", },
           { title: "Security", url: "#", },
