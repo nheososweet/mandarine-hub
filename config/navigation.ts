@@ -56,11 +56,11 @@ export const navigationGroups: NavGroup[] = [
         url: "/rag",
         icon: FileText,
       },
-      //  {
-      //   title:"PDF Highlighter",
-      //   url: "/pdf-highlighter",
-      //   icon: Highlighter,
-      // },
+      {
+        title: "Light RAG",
+        url: "/lightrag",
+        icon: FileText,
+      },
       {
         title: "Agno Chat",
         url: "/chat",

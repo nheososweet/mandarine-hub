@@ -98,7 +98,8 @@ export default function ChatPage() {
   >([]);
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
-
+  const LIGHTRAG_DIRECT_URL = "http://localhost:9621/query/stream";
+  const FASTAPI_REF_URL = "http://127.0.0.1:8000/api/v1/basic-rag/references";
   /**
    * Handle opening the document preview with highlights.
    *
@@ -140,27 +141,27 @@ export default function ChatPage() {
     setPreviewOpen(true);
   };
 
-  // --- Logic: Chat Request ---
+  // --- Logic: Chat Request Updated (Direct Call) ---
   const handleChatRequest = async (userMessage: string) => {
     if (!userMessage.trim() || status === "streaming") return;
 
     setStatus("submitted");
     setText("");
 
-    // 1. Create User Message
+    // 1. Setup UI (Optimistic Update)
     const userMsgEntry: MessageType = {
       key: nanoid(),
       from: "user",
       versions: [{ id: nanoid(), content: userMessage }],
     };
 
-    // 2. Create Assistant Message Placeholder
     const botMsgKey = nanoid();
     const botVersionId = nanoid();
     const botMsgEntry: MessageType = {
       key: botMsgKey,
       from: "assistant",
       versions: [{ id: botVersionId, content: "" }],
+      sources: [],
     };
 
     setMessages((prev) => [...prev, userMsgEntry, botMsgEntry]);
@@ -168,51 +169,136 @@ export default function ChatPage() {
     try {
       abortControllerRef.current = new AbortController();
       setStatus("streaming");
+      const signal = abortControllerRef.current.signal;
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/v1/basic-rag/chat-stream",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userMessage }),
-          signal: abortControllerRef.current.signal,
+      const requestBody = {
+        query: userMessage,         // Quan trọng: LightRAG dùng 'query'
+        mode: "mix",                // Chỉnh mode ở đây
+        top_k: 1,
+        chunk_top_k: 1,
+        max_entity_tokens: 6000,
+        max_relation_tokens: 8000,
+        max_total_tokens: 30000,
+        only_need_context: false,
+        only_need_prompt: false,
+        stream: true,               // Mặc định là true cho luồng chat
+        history_turns: 3,
+        user_prompt: "",
+        // enable_rerank: true,
+        response_type: "Multiple Paragraphs",
+        conversation_history: []    // Nếu có history thì bỏ vào đây
+      };
+
+      // =========================================================
+      // REQUEST A: STREAM TEXT (GỌI TRỰC TIẾP LIGHTRAG)
+      // =========================================================
+      // const streamPromise = fetch(LIGHTRAG_DIRECT_URL, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     query: userMessage,
+      //     mode: "mix", // Hoặc "hybrid", "global"
+      //     stream: true,
+      //     include_references: false, // Ta lấy ref ở API kia rồi nên false cho nhẹ
+      //     history_turns: 3, // Tùy chỉnh history
+      //   }),
+      //   signal,
+      // }).then(async (response) => {
+      //   if (!response.ok) {
+      //     const errText = await response.text();
+      //     throw new Error(`LightRAG Error: ${errText}`);
+      //   }
+
+      //   const reader = response.body?.getReader();
+      //   const decoder = new TextDecoder();
+      //   if (!reader) return;
+
+      //   let accumulatedContent = "";
+
+      //   while (true) {
+      //     const { done, value } = await reader.read();
+      //     if (done) break;
+
+      //     const chunk = decoder.decode(value, { stream: true });
+      //     // LightRAG trả về NDJSON (Newline Delimited JSON)
+      //     const lines = chunk.split("\n");
+
+      //     for (const line of lines) {
+      //       const trimmedLine = line.trim();
+      //       if (!trimmedLine) continue;
+
+      //       try {
+      //         // Parse trực tiếp JSON (Không cần check "data: ")
+      //         const parsed = JSON.parse(trimmedLine);
+
+      //         // 1. Handle Content Chunk (LightRAG key là "response")
+      //         if (parsed.response) {
+      //           accumulatedContent += parsed.response;
+
+      //           setMessages((prev) =>
+      //             prev.map((msg) =>
+      //               msg.key === botMsgKey
+      //                 ? {
+      //                   ...msg,
+      //                   versions: [
+      //                     { ...msg.versions[0], content: accumulatedContent },
+      //                   ],
+      //                 }
+      //                 : msg
+      //             )
+      //           );
+      //         }
+
+      //         // 2. Handle Error from LightRAG
+      //         if (parsed.error) {
+      //           console.error("LightRAG Stream Error:", parsed.error);
+      //           toast.error(parsed.error);
+      //         }
+      //       } catch (e) {
+      //         // Bỏ qua lỗi parse JSON với các dòng không hoàn chỉnh
+      //       }
+      //     }
+      //   }
+      // });
+      // ... bên trong handleChatRequest
+
+      // =========================================================
+      // REQUEST A: STREAM TEXT (GỌI TRỰC TIẾP LIGHTRAG)
+      // =========================================================
+      const streamPromise = fetch(LIGHTRAG_DIRECT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody), // Dùng body chung
+        signal,
+      }).then(async (response) => {
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`LightRAG Error: ${errText}`);
         }
-      );
 
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        if (!reader) return;
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      if (!reader) throw new Error("Response body is null");
+        let accumulatedRaw = ""; // Biến chứa toàn bộ raw text bao gồm cả thẻ tag
 
-      let accumulatedContent = "";
-      let accumulatedSources: any[] = [];
-      let receivedHighlights: Record<string, any[]> = {};
-      let receivedRetrievedDocs: RetrievedChunk[] = [];
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") {
-              setStatus("ready");
-              return;
-            }
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
 
             try {
-              const parsed = JSON.parse(data);
+              const parsed = JSON.parse(trimmedLine);
 
-              // --- CASE 1: Handle Content Stream ---
-              // Backend Format: {"content": {"content": "text...", ...}}
-              if (parsed.content && parsed.content.content) {
-                accumulatedContent += parsed.content.content;
+              if (parsed.response) {
+                // 1. Tích lũy Raw Text
+                accumulatedRaw += parsed.response;
 
                 // 2. Logic Tách <think>...</think>
                 let reasoningContent = "";
@@ -220,18 +306,16 @@ export default function ChatPage() {
                 let isThinkingDone = false;
 
                 // Regex tìm thẻ think
-                const thinkMatch = accumulatedContent.match(
-                  /<think>([\s\S]*?)(?:<\/think>|$)/
-                );
+                const thinkMatch = accumulatedRaw.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
 
                 if (thinkMatch) {
                   // Đang có thẻ think
                   reasoningContent = thinkMatch[1]; // Lấy nội dung bên trong
 
-                  if (accumulatedContent.includes("</think>")) {
+                  if (accumulatedRaw.includes("</think>")) {
                     // Đã đóng thẻ think -> Lấy phần text phía sau làm main content
                     isThinkingDone = true;
-                    mainContent = accumulatedContent.split("</think>")[1] || "";
+                    mainContent = accumulatedRaw.split("</think>")[1] || "";
                   } else {
                     // Chưa đóng thẻ think -> Main content rỗng
                     isThinkingDone = false;
@@ -239,76 +323,91 @@ export default function ChatPage() {
                   }
                 } else {
                   // Không có thẻ think -> Toàn bộ là main content
-                  mainContent = accumulatedContent;
+                  mainContent = accumulatedRaw;
                   isThinkingDone = true;
                 }
 
+                // 3. Update State
                 setMessages((prev) =>
-                  prev.map((msg) => {
-                    if (msg.key === botMsgKey) {
-                      return {
+                  prev.map((msg) =>
+                    msg.key === botMsgKey
+                      ? {
                         ...msg,
+                        // Cập nhật reasoning
                         reasoning: reasoningContent
                           ? {
                             content: reasoningContent,
                             isDone: isThinkingDone,
                           }
                           : undefined,
-                        versions: msg.versions.map((v) =>
-                          v.id === botVersionId
-                            ? { ...v, content: mainContent }
-                            : v
-                        ),
-                      };
-                    }
-                    return msg;
-                  })
+                        // Cập nhật nội dung chính
+                        versions: [
+                          { ...msg.versions[0], content: mainContent },
+                        ],
+                      }
+                      : msg
+                  )
                 );
               }
 
-              // --- CASE 2: Handle Sources ---
-              // Backend Format: {"sources": [{"source": "...", "content": "...", "url": "..."}, ...]}
-              if (parsed.sources) {
-                accumulatedSources = parsed.sources;
-
-                setMessages((prev) =>
-                  prev.map((msg) => {
-                    if (msg.key === botMsgKey) {
-                      return {
-                        ...msg,
-                        sources: accumulatedSources, // Attach full source objects
-                      };
-                    }
-                    return msg;
-                  })
-                );
+              if (parsed.error) {
+                toast.error(parsed.error);
               }
-
-              // --- CASE 3: Handle Highlights (sent separately in last chunk) ---
-              // Backend Format: {"highlights": {"fileUrl": [{pageIndex, left, top, width, height}, ...]}}
-              if (parsed.highlights) {
-                receivedHighlights = parsed.highlights;
-                setHighlightsMap(receivedHighlights);
-                console.log("✨ Received highlights:", receivedHighlights);
-              }
-
-              if (parsed.retrievedChunks) {
-                receivedRetrievedDocs = parsed.retrievedChunks;
-                setRetrievedChunksMap(receivedRetrievedDocs);
-                console.log("✨ Received highlights:", receivedHighlights);
-              }
-            } catch (parseError) {
-              // Ignore non-json lines or keepalive chunks
+            } catch (e) {
+              // Ignore json parse error
             }
           }
         }
-      }
+      });
+      // =========================================================
+      // REQUEST B: GET REFERENCES (GỌI QUA FASTAPI CỦA BẠN)
+      // =========================================================
+      const refPromise = fetch(FASTAPI_REF_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Gửi cùng một body.
+        // Backend sẽ tự động ép field "stream": false để xử lý logic lấy data.
+        body: JSON.stringify(requestBody),
+        signal,
+      }).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          // data format: { sources: [], highlights: {}, raw_chunks: [] }
+
+          console.log("📑 References & Highlights Received:", data);
+
+          // Update Global Highlights Map
+          if (data.highlights) {
+            setHighlightsMap((prev) => ({ ...prev, ...data.highlights }));
+          }
+
+          // Update Global Raw Chunks
+          if (data.raw_chunks) {
+            setRetrievedChunksMap(data.raw_chunks);
+          }
+
+          // Update Message Source Button
+          if (data.sources && data.sources.length > 0) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.key === botMsgKey
+                  ? { ...msg, sources: data.sources }
+                  : msg
+              )
+            );
+          }
+        } else {
+          console.error("Failed to fetch references from FastAPI");
+        }
+      });
+
+      // Chạy song song cả 2 request
+      await Promise.allSettled([streamPromise, refPromise]);
+
       setStatus("ready");
     } catch (err: any) {
-      if (err.name === "AbortError") {
-        toast.info("Đã dừng phản hồi");
-      } else {
-        toast.error("Lỗi: " + (err.message || "Unknown error"));
+      if (err.name !== "AbortError") {
+        toast.error("Error: " + err.message);
         setStatus("error");
       }
     } finally {
@@ -364,7 +463,7 @@ export default function ChatPage() {
                       key={`${message.key}-${version.id}`}
                     >
                       <div className="flex flex-col w-full">
-                        {/* Reasoning Block (Assistant Only) */}
+                        {/* === THÊM PHẦN NÀY: Reasoning Block (Chỉ hiện cho Assistant) === */}
                         {message.from === "assistant" && message.reasoning && (
                           <ReasoningBlock
                             content={message.reasoning.content}
@@ -374,12 +473,12 @@ export default function ChatPage() {
                         )}
 
                         {/* 1. Message Text Content */}
-                        {(version.content ||
-                          (!message.reasoning && status === "streaming")) && (
-                            <MessageContent>
-                              <MessageResponse>{version.content}</MessageResponse>
-                            </MessageContent>
-                          )}
+                        {/* Chỉ hiện Content khi nó có nội dung (để tránh một khoảng trắng lớn khi đang thinking) */}
+                        {(version.content || (!message.reasoning && status === 'streaming')) && (
+                          <MessageContent>
+                            <MessageResponse>{version.content}</MessageResponse>
+                          </MessageContent>
+                        )}
 
                         {/* 2. Source Button (Assistant Only) */}
                         {message.from === "assistant" &&
