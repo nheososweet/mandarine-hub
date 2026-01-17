@@ -40,8 +40,8 @@ import {
   Position,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import AgentNode from "./_components/flows/AgentNode";
 import Link from "next/link";
+import AgentNode from "./_components/flows/AgentNode";
 
 // Dữ liệu Node (Vị trí fix cứng để ra hình cây đẹp nhất)
 const initialNodes = [
@@ -95,7 +95,7 @@ const initialNodes = [
   {
     id: "5",
     type: "agent",
-    position: { x: 500, y: 300 },
+    position: { x: 495, y: 300 },
     data: {
       label: "German Agent",
       role: "Worker",
@@ -106,7 +106,7 @@ const initialNodes = [
   {
     id: "6",
     type: "agent",
-    position: { x: 700, y: 300 },
+    position: { x: 705, y: 300 },
     data: {
       label: "Dutch Agent",
       role: "Worker",
@@ -290,7 +290,7 @@ export default function MandarineHubHome() {
             <Link href={"/dashboard"}>
               <Button
                 size="sm"
-                className="hidden sm:flex rounded-full bg-white text-black hover:bg-zinc-200 font-semibold px-5"
+                className="hidden sm:flex rounded-full bg-white text-black hover:bg-zinc-200 font-semibold px-5 cursor-pointer"
               >
                 Launch App
               </Button>
@@ -341,7 +341,7 @@ export default function MandarineHubHome() {
                     >
                       <SheetClose>Documentation</SheetClose>
                     </a>
-                    <Button className="w-full mt-4 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 shadow-lg shadow-orange-500/20">
+                    <Button className="w-full mt-4 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 shadow-lg shadow-orange-500/20 cursor-pointer">
                       Launch App Now
                     </Button>
                   </div>
@@ -365,7 +365,7 @@ export default function MandarineHubHome() {
             className="bg-white/5 border-white/10 text-orange-300 mb-6 backdrop-blur-md gap-2"
           >
             <Sparkles className="w-3 h-3" />
-            Mandarine OS v1.0 Alpha
+            Mandarine v1.0 Beta
           </Badge>
         </motion.div>
         <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-6 bg-gradient-to-b from-white via-white to-white/40 bg-clip-text text-transparent max-w-4xl mx-auto leading-[1.1]">
@@ -504,6 +504,9 @@ export default function MandarineHubHome() {
             proOptions={{ hideAttribution: true }} // Ẩn logo ReactFlow nếu có bản pro
             panOnScroll={false} // Tắt scroll để tránh conflict với trang
             zoomOnScroll={false}
+            panOnDrag={false}
+            zoomOnPinch={false}
+            zoomOnDoubleClick={false}
             nodesConnectable={false} // Readonly
             nodesDraggable={false} // Readonly
           >

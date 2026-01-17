@@ -52,15 +52,15 @@ export const navigationGroups: NavGroup[] = [
         icon: LayoutDashboard,
       },
       {
-        title:"RAG",
+        title: "RAG",
         url: "/rag",
         icon: FileText,
       },
-       {
-        title:"PDF Highlighter",
-        url: "/pdf-highlighter",
-        icon: Highlighter,
-      },
+      // {
+      //   title: "PDF Highlighter",
+      //   url: "/pdf-highlighter",
+      //   icon: Highlighter,
+      // },
       {
         title: "Agno Chat",
         url: "/chat",
@@ -68,17 +68,17 @@ export const navigationGroups: NavGroup[] = [
       },
       {
         title: "Knowledge Base",
-        url: "#",
+        url: "/knowledge",
         icon: Database,
       },
       {
         title: "Agents",
-        url: "#",
+        url: "/agents",
         icon: Bot,
       },
       {
         title: "Workflows",
-    url: "#",
+        url: "/workflows",
         icon: Workflow,
       },
     ],
@@ -88,23 +88,23 @@ export const navigationGroups: NavGroup[] = [
     items: [
       {
         title: "Settings",
-     url: "#",
+        url: "/settings",
         icon: Settings2,
         items: [
-          { title: "General",  url: "#", },
-          { title: "Appearance", url: "#", },
-          { title: "Notifications", url: "#", },
-          { title: "Security", url: "#", },
+          { title: "General", url: "/settings/general", },
+          { title: "Appearance", url: "/settings/appearance", },
+          { title: "Notifications", url: "/settings/notifications", },
+          { title: "Security", url: "/settings/security", },
         ],
       },
       {
         title: "API Keys",
-        url: "#",
+        url: "/api-keys",
         icon: Key,
       },
       {
         title: "Team",
-        url: "#",
+        url: "/team",
         icon: Users,
       },
     ],
@@ -115,12 +115,12 @@ export const navigationGroups: NavGroup[] = [
 export const secondaryNav = [
   {
     title: "Documentation",
-    url: "#",
+    url: "/docs",
     icon: BookOpen,
   },
   {
     title: "Help & Support",
-    url: "#",
+    url: "/help",
     icon: LifeBuoy,
   },
 ];
@@ -139,23 +139,23 @@ export const userMenuItems: UserMenuItem[] = [
   {
     label: "Profile",
     icon: User,
-    url: "#",
+    url: "/profile",
   },
   {
     label: "Billing",
     icon: CreditCard,
-    url: "#",
+    url: "/billing",
   },
   {
     label: "Settings",
     icon: Settings2,
-    url: "#",
+    url: "/settings",
     separator: true,
   },
   {
     label: "Support",
     icon: LifeBuoy,
-    url: "#",
+    url: "/help",
   },
   {
     label: "Sign out",
@@ -167,8 +167,8 @@ export const userMenuItems: UserMenuItem[] = [
 
 // App Header Config
 export const appConfig = {
-  name: "Mandarine OS",
-  version: "v1.2 Beta",
+  name: "Mandarine",
+  version: "v1.0 Beta",
   logo: {
     icon: Sparkles,
     url: "/",

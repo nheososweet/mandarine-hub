@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import Squares from "@/components/Squares";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import Particles from "@/components/Particles";
+import { AppHeader } from "@/components/AppHeader";
 
 export default function MainAppLayout({
   children,
@@ -34,13 +35,8 @@ export default function MainAppLayout({
             />
           </div>
 
-          {/* Header Mobile Trigger */}
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 bg-background/80 backdrop-blur-md z-10 sticky top-0">
-            <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">
-              Dashboard Console
-            </span>
-          </header>
+          {/* Dynamic App Header */}
+          <AppHeader />
 
           {/* Main Content Area */}
           <main className="flex-1 overflow-hidden relative z-10 scrollbar-thin scrollbar-thumb-zinc-800">

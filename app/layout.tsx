@@ -30,41 +30,103 @@ export const viewport: Viewport = {
 
 // 2. Cấu hình SEO Metadata
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"), // Thay bằng domain thật khi deploy
+  metadataBase: new URL("http://www.nheososweet.me"),
   title: {
-    default: "Mandarine Hub - Orchestrate Your Digital Workforce",
-    template: "%s | Mandarine Hub", // Các trang con sẽ hiện: "Trang con | Mandarine Hub"
+    default: "Nheo So Sweet | Fullstack Developer & AI Engineer",
+    template: "%s | Nheo So Sweet",
   },
-  description: "The ultimate platform for multi-agent systems, advanced TTS/STS synthesis, and autonomous workflows. Powered by Mandarine OS.",
-  keywords: ["AI", "Agents", "Workflow", "Mandarine", "Automation", "LLM", "TTS"],
-  authors: [{ name: "Mandarine Team" }],
-  creator: "Mandarine Team",
+  description:
+    "Portfolio của Nguyễn Văn Tân (Nheo So Sweet) - Fullstack Developer & AI Engineer. Chuyên xây dựng các giải pháp công nghệ toàn diện, từ Backend vững chắc đến giao diện Next.js tinh tế và tích hợp AI thông minh.",
+  keywords: [
+    "Nheo So Sweet",
+    "nheososweet",
+    "Nguyen Van Tan",
+    "Nguyễn Văn Tân",
+    "Fullstack Developer",
+    "AI Engineer",
+    "Next.js Developer",
+    "React Developer Vietnam",
+    "RAG System",
+    "Lập trình viên AI",
+    "Web Developer",
+  ],
+  authors: [{ name: "Nguyen Van Tan", url: "http://www.nheososweet.me" }],
+  creator: "Nguyen Van Tan",
+
   openGraph: {
     type: "website",
-    locale: "en_US",
-    url: "/",
-    title: "Mandarine Hub - AI Agent Orchestration",
-    description: "Deploy specialized AI workers that collaborate to solve complex tasks autonomously.",
-    siteName: "Mandarine Hub",
+    locale: "vi_VN",
+    url: "http://www.nheososweet.me",
+    title: "Nheo So Sweet | Fullstack Developer & AI Engineer",
+    description:
+      "Khám phá Portfolio của Nguyễn Văn Tân - Kết hợp tư duy sản phẩm Fullstack với sức mạnh của AI & Next.js.",
+    siteName: "Nheo So Sweet Portfolio",
     images: [
       {
-        url: "/og-image.png", // Bạn nên tạo 1 ảnh og-image.png bỏ vào folder public
+        url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Mandarine Hub Preview",
+        alt: "Nheo So Sweet Portfolio",
       },
     ],
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "Mandarine Hub",
-    description: "Orchestrate Your Digital Workforce with Mandarine OS.",
+    title: "Nheo So Sweet | Fullstack Developer & AI Engineer",
+    description:
+      "Portfolio của Nguyễn Văn Tân - Chuyên gia Fullstack & AI Integration.",
     images: ["/og-image.png"],
-    creator: "@mandarine_hub",
+    creator: "@nheososweet",
   },
+
   icons: {
-    icon: "/mandarine.svg", // Tự động trỏ tới file icon.tsx chúng ta tạo ở bước 2
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
   },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
+
+// 3. Schema JSON-LD
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Nguyen Van Tan",
+  alternateName: "Nheo So Sweet",
+  url: "http://www.nheososweet.me",
+  image: "http://www.nheososweet.me/og-image.png",
+  sameAs: [
+    "https://github.com/your-github",
+    "https://linkedin.com/in/your-linkedin",
+    "https://facebook.com/your-facebook",
+  ],
+  jobTitle: "Fullstack Developer & AI Engineer",
+  worksFor: {
+    "@type": "Organization",
+    name: "Freelance / Open for Work",
+  },
+  knowsAbout: [
+    "Software Development",
+    "Fullstack Development",
+    "Next.js",
+    "Artificial Intelligence",
+    "RAG Systems",
+    "React",
+    "Python",
+    "Backend Engineering",
+  ],
 };
 
 export default function RootLayout({
@@ -78,6 +140,11 @@ export default function RootLayout({
         // className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
         className={`${fontSans.variable} ${fontDisplay.variable} antialiased bg-background text-foreground font-sans`}
       >
+        {/* Inject JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark" // Mandarine style hợp với dark hơn
