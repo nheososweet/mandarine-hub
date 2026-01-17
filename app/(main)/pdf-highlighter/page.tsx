@@ -26,13 +26,18 @@ import "./style/style.css";
 
 const testHighlights: Record<string, Array<IHighlight>> = _testHighlights;
 
+
 const getNextId = () => String(Math.random()).slice(2);
 
-const parseIdFromHash = () =>
-  document.location.hash.slice("#highlight-".length);
+const parseIdFromHash = () => {
+    if (typeof window === "undefined") return "";
+    return document.location.hash.slice("#highlight-".length);
+}
 
 const resetHash = () => {
-  document.location.hash = "";
+    if (typeof window !== "undefined") {
+        document.location.hash = "";
+    }
 };
 
 const HighlightPopup = ({
@@ -50,13 +55,17 @@ const PRIMARY_PDF_URL = "https://arxiv.org/pdf/1708.08021";
 const SECONDARY_PDF_URL = "https://arxiv.org/pdf/1604.02480";
 
 export default function Page() {
-  const searchParams = new URLSearchParams(document.location.search);
-  const initialUrl = searchParams.get("url") || PRIMARY_PDF_URL;
+  const [url, setUrl] = useState(PRIMARY_PDF_URL);
+  const [highlights, setHighlights] = useState<Array<IHighlight>>([]);
 
-  const [url, setUrl] = useState(initialUrl);
-  const [highlights, setHighlights] = useState<Array<IHighlight>>(
-    testHighlights[initialUrl] ? [...testHighlights[initialUrl]] : []
-  );
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(document.location.search);
+        const initialUrl = searchParams.get("url") || PRIMARY_PDF_URL;
+        setUrl(initialUrl);
+        setHighlights(testHighlights[initialUrl] ? [...testHighlights[initialUrl]] : []);
+    }
+  }, []);
 
   const resetHighlights = () => {
     setHighlights([]);

@@ -2,7 +2,8 @@
  * Convert Backend Source format to IHighlight format for react-pdf-highlighter
  */
 
-import type { IHighlight } from "../../pdf/react-pdf-highlighter";
+import { IHighlight } from "@/plugins/pdf-highlighter";
+
 
 export interface SourceData {
     content: {
