@@ -132,7 +132,7 @@ interface DocumentPreviewSheetProps {
 export default function DocumentPreviewSheet({
   open,
   onOpenChange,
-  fileUrl = "/noiquy.pdf",
+  fileUrl,
   highlightAreas = [],
   initialPage = 0,
   documentTitle = "Document",
@@ -280,7 +280,7 @@ export default function DocumentPreviewSheet({
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
               {fileUrl ? (
                 <Viewer
-                  fileUrl={"/noiquy.pdf"}
+                  fileUrl={fileUrl}
                   initialPage={0}
                   plugins={[
                     defaultLayoutPluginInstance,

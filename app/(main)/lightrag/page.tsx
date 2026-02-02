@@ -27,7 +27,6 @@ import {
   PromptInputAttachment,
   PromptInputAttachments,
   PromptInputBody,
-  PromptInputButton,
   PromptInputFooter,
   PromptInputHeader,
   type PromptInputMessage,
@@ -57,7 +56,7 @@ type MessageType = {
   }[];
   reasoning?: {
     content: string;
-    isDone: boolean; // Đánh dấu đã kết thúc thẻ </think> chưa
+    isDone: boolean;
   };
   tools?: {
     name: string;
@@ -174,8 +173,8 @@ export default function ChatPage() {
       const requestBody = {
         query: userMessage,         // Quan trọng: LightRAG dùng 'query'
         mode: "mix",                // Chỉnh mode ở đây
-        top_k: 1,
-        chunk_top_k: 1,
+        top_k: 3,
+        chunk_top_k: 3,
         max_entity_tokens: 6000,
         max_relation_tokens: 8000,
         max_total_tokens: 30000,

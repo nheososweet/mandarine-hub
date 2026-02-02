@@ -279,7 +279,7 @@ export default function DocumentPreviewSheet({
           <TabsContent value="pdf" className="flex-1 overflow-hidden m-4 mt-2">
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
               <Viewer
-                fileUrl={"/noiquy.pdf"}
+                fileUrl={fileUrl}
                 // initialPage={initialPage}
                 initialPage={0}
 
