@@ -51,78 +51,78 @@ export const navigationGroups: NavGroup[] = [
         url: "/dashboard",
         icon: LayoutDashboard,
       },
-      {
-        title: "RAG",
-        url: "/rag",
-        icon: FileText,
-      },
+      // {
+      //   title: "RAG",
+      //   url: "/rag",
+      //   icon: FileText,
+      // },
       {
         title: "Light RAG",
-        url: "/lightrag",
+        url: "/lightrag/b6e7cbe5-a5b3-433f-9cda-914e7adf0bb3",
         icon: FileText,
       },
-      {
-        title: "Agno Chat",
-        url: "/chat",
-        icon: MessageSquare,
-      },
-      {
-        title: "Knowledge Base",
-        url: "#",
-        icon: Database,
-      },
-      {
-        title: "Agents",
-        url: "#",
-        icon: Bot,
-      },
-      {
-        title: "Workflows",
-        url: "#",
-        icon: Workflow,
-      },
+      // {
+      //   title: "Agno Chat",
+      //   url: "/chat",
+      //   icon: MessageSquare,
+      // },
+      // {
+      //   title: "Knowledge Base",
+      //   url: "#",
+      //   icon: Database,
+      // },
+      // {
+      //   title: "Agents",
+      //   url: "#",
+      //   icon: Bot,
+      // },
+      // {
+      //   title: "Workflows",
+      //   url: "#",
+      //   icon: Workflow,
+      // },
     ],
   },
-  {
-    label: "Configuration",
-    items: [
-      {
-        title: "Settings",
-        url: "#",
-        icon: Settings2,
-        items: [
-          { title: "General", url: "#", },
-          { title: "Appearance", url: "#", },
-          { title: "Notifications", url: "#", },
-          { title: "Security", url: "#", },
-        ],
-      },
-      {
-        title: "API Keys",
-        url: "#",
-        icon: Key,
-      },
-      {
-        title: "Team",
-        url: "#",
-        icon: Users,
-      },
-    ],
-  },
+  // {
+  //   label: "Configuration",
+  //   items: [
+  //     {
+  //       title: "Settings",
+  //       url: "#",
+  //       icon: Settings2,
+  //       items: [
+  //         { title: "General", url: "#", },
+  //         { title: "Appearance", url: "#", },
+  //         { title: "Notifications", url: "#", },
+  //         { title: "Security", url: "#", },
+  //       ],
+  //     },
+  //     {
+  //       title: "API Keys",
+  //       url: "#",
+  //       icon: Key,
+  //     },
+  //     {
+  //       title: "Team",
+  //       url: "#",
+  //       icon: Users,
+  //     },
+  //   ],
+  // },
 ];
 
 // Secondary Navigation (Footer)
 export const secondaryNav = [
-  {
-    title: "Documentation",
-    url: "#",
-    icon: BookOpen,
-  },
-  {
-    title: "Help & Support",
-    url: "#",
-    icon: LifeBuoy,
-  },
+  // {
+  //   title: "Documentation",
+  //   url: "#",
+  //   icon: BookOpen,
+  // },
+  // {
+  //   title: "Help & Support",
+  //   url: "#",
+  //   icon: LifeBuoy,
+  // },
 ];
 
 // User Menu Items (for dropdown)

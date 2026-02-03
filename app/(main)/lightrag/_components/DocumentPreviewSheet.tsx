@@ -9,13 +9,26 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, FileCode, Copy, Check } from "lucide-react";
+import {
+  FileText,
+  FileCode,
+  Copy,
+  Check,
+  ChevronDown,
+  File,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Viewer, Worker } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
-import type { ToolbarSlot, TransformToolbarSlot } from '@react-pdf-viewer/toolbar';
-import { toolbarPlugin } from '@react-pdf-viewer/toolbar';
-import { fullScreenPlugin } from '@react-pdf-viewer/full-screen';
+import type { ToolbarSlot, TransformToolbarSlot } from "@react-pdf-viewer/toolbar";
+import { toolbarPlugin } from "@react-pdf-viewer/toolbar";
+import { fullScreenPlugin } from "@react-pdf-viewer/full-screen";
 
 import {
   highlightPlugin,
@@ -25,11 +38,11 @@ import {
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import "@react-pdf-viewer/highlight/lib/styles/index.css";
-import '@react-pdf-viewer/zoom/lib/styles/index.css';
-import '@react-pdf-viewer/toolbar/lib/styles/index.css';
-import '@react-pdf-viewer/print/lib/styles/index.css';
-import '@react-pdf-viewer/page-navigation/lib/styles/index.css';
-import '@react-pdf-viewer/full-screen/lib/styles/index.css';
+import "@react-pdf-viewer/zoom/lib/styles/index.css";
+import "@react-pdf-viewer/toolbar/lib/styles/index.css";
+import "@react-pdf-viewer/print/lib/styles/index.css";
+import "@react-pdf-viewer/page-navigation/lib/styles/index.css";
+import "@react-pdf-viewer/full-screen/lib/styles/index.css";
 
 const ChunkCard = ({
   chunk,
@@ -87,15 +100,10 @@ const ChunkCard = ({
 
       {/* Nội dung text */}
       <div className="p-4 text-sm leading-7 text-muted-foreground">
-        {/* whitespace-pre-wrap: Giữ nguyên xuống dòng từ data */}
         <p className="whitespace-pre-wrap font-normal">{chunk.text}</p>
-        {/* <MarkdownRenderer>{chunk.text}</MarkdownRenderer> */}
-        {/* <MessageContent>
-          <MessageResponse>{chunk.text}</MessageResponse>
-        </MessageContent> */}
       </div>
 
-      {/* Footer nhỏ hiển thị ID (tùy chọn, dùng để debug) */}
+      {/* Footer nhỏ hiển thị ID */}
       <div className="px-4 pb-2">
         <p className="text-[10px] text-muted-foreground/40 font-mono">
           ID: {chunk.id}
@@ -116,42 +124,73 @@ export interface RetrievedChunk {
   id: string;
   text: string;
   source: string;
+  url: string;
+  page: number;
+}
+
+interface Source {
+  source: string;
+  url: string;
   page: number;
 }
 
 interface DocumentPreviewSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  fileUrl?: string;
-  highlightAreas?: HighlightArea[];
-  initialPage?: number;
-  documentTitle?: string;
+  sources?: Source[];
+  highlights?: Record<string, HighlightArea[]>;
   retrievedChunks?: RetrievedChunk[];
 }
 
 export default function DocumentPreviewSheet({
   open,
   onOpenChange,
-  fileUrl,
-  highlightAreas = [],
-  initialPage = 0,
-  documentTitle = "Document",
+  sources = [],
+  highlights = {},
   retrievedChunks = [],
 }: DocumentPreviewSheetProps) {
-  console.log("Retrieved Chunks:", retrievedChunks);
+  // State for selected file
+  const [selectedSource, setSelectedSource] = React.useState<Source | null>(
+    null
+  );
+  const [currentHighlightAreas, setCurrentHighlightAreas] = React.useState<
+    HighlightArea[]
+  >([]);
+
+  // Initialize selected source when sources change
+  React.useEffect(() => {
+    if (sources.length > 0 && !selectedSource) {
+      setSelectedSource(sources[0]);
+    }
+  }, [sources, selectedSource]);
+
+  // Update highlight areas when selected source changes
+  React.useEffect(() => {
+    if (selectedSource) {
+      const areas = highlights[selectedSource.url] || [];
+      setCurrentHighlightAreas(areas);
+    }
+  }, [selectedSource, highlights]);
+
+  // Filter chunks for selected source
+  const filteredChunks = React.useMemo(() => {
+    if (!selectedSource) return [];
+    return retrievedChunks.filter((chunk) => chunk.url === selectedSource.url);
+  }, [selectedSource, retrievedChunks]);
+
   // Convert highlightAreas to internal format for rendering
-  const highlights = React.useMemo(() => {
-    return highlightAreas.map((area, idx) => ({
+  const highlightsInternal = React.useMemo(() => {
+    return currentHighlightAreas.map((area, idx) => ({
       id: idx,
       content: `Highlight on page ${area.pageIndex + 1}`,
       highlightAreas: [area],
       quote: "",
     }));
-  }, [highlightAreas]);
+  }, [currentHighlightAreas]);
 
   const renderHighlights = (props: any) => (
     <div>
-      {highlightAreas
+      {currentHighlightAreas
         .filter((area) => area.pageIndex === props.pageIndex)
         .map((area, idx) => (
           <div
@@ -174,7 +213,6 @@ export default function DocumentPreviewSheet({
   // Transform toolbar to remove Open File button
   const transform: TransformToolbarSlot = (slot: ToolbarSlot) => ({
     ...slot,
-    // Remove Open File button from toolbar and menu
     Open: () => <></>,
     OpenMenuItem: () => <></>,
   });
@@ -184,20 +222,18 @@ export default function DocumentPreviewSheet({
   const { renderDefaultToolbar, Toolbar } = toolbarPluginInstance;
 
   const fullScreenPluginInstance = fullScreenPlugin({
-    // Enable keyboard shortcuts (Ctrl+Cmd+F on macOS, F11 on other OS)
     enableShortcuts: true,
   });
 
   const defaultLayoutPluginInstance = defaultLayoutPlugin({
     sidebarTabs: (defaultTabs) => [
-      defaultTabs[0],  // Giữ tab Thumbnails (trang nhỏ)
+      defaultTabs[0], // Keep thumbnails tab
       {
         content: sidebarNotes,
         icon: <MessageIcon />,
         title: "Highlights",
       },
     ],
-    // Custom toolbar without Open File button
     renderToolbar: (Toolbar) => (
       <Toolbar>{renderDefaultToolbar(transform)}</Toolbar>
     ),
@@ -210,10 +246,12 @@ export default function DocumentPreviewSheet({
   const sidebarNotes = (
     <div style={{ padding: "10px", overflow: "auto", height: "100%" }}>
       <h3 style={{ marginBottom: "10px" }}>
-        Highlights ({highlightAreas.length})
+        Highlights ({currentHighlightAreas.length})
       </h3>
-      {highlightAreas.length === 0 && <div>No highlights available</div>}
-      {highlights.map((note) => (
+      {currentHighlightAreas.length === 0 && (
+        <div>No highlights available</div>
+      )}
+      {highlightsInternal.map((note) => (
         <div
           key={note.id}
           style={{
@@ -235,28 +273,61 @@ export default function DocumentPreviewSheet({
     </div>
   );
 
-  // const defaultLayoutPluginInstanceWithTabs = defaultLayoutPlugin({
-  //   sidebarTabs: (defaultTabs) =>
-  //     defaultTabs.concat({
-  //       content: sidebarNotes,
-  //       icon: <MessageIcon />,
-  //       title: "Highlights",
-  //     }),
-  // });
-
-
+  // Handle source selection
+  const handleSourceSelect = (source: Source) => {
+    setSelectedSource(source);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[95%] sm:max-w-7xl p-0 flex flex-col bg-zinc-100 dark:bg-zinc-900 border-l">
         {/* Header */}
         <SheetHeader className="p-4 border-b bg-white dark:bg-zinc-950 shrink-0">
-          <SheetTitle className="flex items-center gap-2 text-base">
-            {documentTitle}
-          </SheetTitle>
-          <SheetDescription>
-            View document with highlighted source references
-          </SheetDescription>
+          {/* Title area với dropdown trigger */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex gap-2 justify-between cursor-pointer hover:bg-muted/50 rounded-md p-2 -m-2 transition-colors w-fit">
+                <div className="flex-1">
+                  <SheetTitle className="flex items-center gap-2 text-base">
+                    <FileText className="w-4 h-4" />
+                    {selectedSource?.source || "Document Preview"}
+                  </SheetTitle>
+                  <SheetDescription>
+                    {sources.length > 1
+                      ? `${sources.length} sources available. Click to switch.`
+                      : "View document with highlighted source references"}
+                  </SheetDescription>
+                </div>
+                {sources.length > 1 && (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground mt-1" />
+                )}
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              {sources.map((source, idx) => (
+                <DropdownMenuItem
+                  key={idx}
+                  onClick={() => handleSourceSelect(source)}
+                  className={`flex items-center gap-2 ${selectedSource?.url === source.url ? 'bg-primary/10 border-primary/20' : ''}`}
+                >
+                  <div className="flex items-center gap-2 flex-1">
+                    <FileText className={`w-4 h-4 ${selectedSource?.url === source.url ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="flex-1 truncate">
+                      <p className={`truncate line-clamp-1 font-medium ${selectedSource?.url === source.url ? 'text-primary' : ''}`}>
+                        {source.source}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {source.url}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedSource?.url === source.url && (
+                    <Check className="w-4 h-4 text-primary shrink-0" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SheetHeader>
 
         {/* Tabs for PDF Viewer and Raw Text */}
@@ -276,12 +347,15 @@ export default function DocumentPreviewSheet({
           </TabsList>
 
           {/* PDF Viewer Tab */}
-          <TabsContent value="pdf" className="flex-1 overflow-hidden m-4 mt-2">
+          <TabsContent
+            value="pdf"
+            className="flex-1 overflow-hidden m-4 mt-2"
+          >
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
-              {fileUrl ? (
+              {selectedSource ? (
                 <Viewer
-                  fileUrl={fileUrl}
-                  initialPage={0}
+                  fileUrl={selectedSource.url}
+                  initialPage={selectedSource.page - 1 || 0}
                   plugins={[
                     defaultLayoutPluginInstance,
                     highlightPluginInstance,
@@ -303,25 +377,30 @@ export default function DocumentPreviewSheet({
             className="flex-1 overflow-auto m-4 mt-2 pr-2"
           >
             <div className="space-y-4 pb-8">
-              {/* Header nhỏ cho list */}
+              {/* Header with source filter */}
               <div className="flex items-center justify-between pb-2">
                 <h3 className="text-sm font-medium text-muted-foreground">
-                  Found {retrievedChunks.length} chunks
+                  Found {filteredChunks.length} chunks
+                  {sources.length > 1 && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (from {selectedSource?.source || "unknown"})
+                    </span>
+                  )}
                 </h3>
               </div>
 
-              {retrievedChunks.length === 0 && (
+              {filteredChunks.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground animate-in fade-in-50">
                   <div className="rounded-full bg-muted p-3 mb-4">
                     <FileCode className="h-6 w-6 text-muted-foreground/50" />
                   </div>
-                  <p>No retrieved chunks available</p>
+                  <p>No retrieved chunks for this file</p>
                 </div>
               )}
 
               {/* Render danh sách chunk */}
               <div className="grid gap-4">
-                {retrievedChunks.map((chunk, idx) => (
+                {filteredChunks.map((chunk, idx) => (
                   <ChunkCard key={chunk.id} chunk={chunk} index={idx} />
                 ))}
               </div>
