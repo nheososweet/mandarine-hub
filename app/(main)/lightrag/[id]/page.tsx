@@ -104,7 +104,7 @@ export default function ChatPage({ params }: ChatPageProps) {
     // Refs
     const abortControllerRef = useRef<AbortController | null>(null);
     const LIGHTRAG_DIRECT_URL = "http://192.168.1.169:9621/query/stream";
-    const FASTAPI_REF_URL = "http://127.0.0.1:8000/api/v1/basic-rag/references";
+    const FASTAPI_REF_URL = "http://127.0.0.1:3201/api/v1/basic-rag/references";
     /**
      * Handle opening the document preview with highlights.
      * Opens the sheet with all sources and highlights for selection.

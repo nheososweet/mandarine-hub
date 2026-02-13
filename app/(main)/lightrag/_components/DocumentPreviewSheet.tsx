@@ -8,7 +8,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FileText,
   FileCode,
@@ -22,6 +21,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Viewer, Worker } from "@react-pdf-viewer/core";
@@ -153,6 +153,7 @@ export default function DocumentPreviewSheet({
   const [selectedSource, setSelectedSource] = React.useState<Source | null>(
     null
   );
+  const [activeTab, setActiveTab] = React.useState<string>("pdf");
   const [currentHighlightAreas, setCurrentHighlightAreas] = React.useState<
     HighlightArea[]
   >([]);
@@ -180,18 +181,20 @@ export default function DocumentPreviewSheet({
 
   // Convert highlightAreas to internal format for rendering
   const highlightsInternal = React.useMemo(() => {
-    return currentHighlightAreas.map((area, idx) => ({
-      id: idx,
-      content: `Highlight on page ${area.pageIndex + 1}`,
-      highlightAreas: [area],
-      quote: "",
-    }));
+    return currentHighlightAreas
+      .filter((area) => area && typeof area.pageIndex === 'number')
+      .map((area, idx) => ({
+        id: idx,
+        content: `Highlight on page ${(area.pageIndex ?? 0) + 1}`,
+        highlightAreas: [area],
+        quote: "",
+      }));
   }, [currentHighlightAreas]);
 
   const renderHighlights = (props: any) => (
     <div>
       {currentHighlightAreas
-        .filter((area) => area.pageIndex === props.pageIndex)
+        .filter((area) => area && typeof area.pageIndex === 'number' && area.pageIndex === props.pageIndex)
         .map((area, idx) => (
           <div
             key={idx}
@@ -202,9 +205,9 @@ export default function DocumentPreviewSheet({
                 opacity: 0.4,
                 cursor: "pointer",
               },
-              props.getCssProperties(area, props.rotation)
+              props.getCssProperties && props.getCssProperties(area, props.rotation)
             )}
-            title={`Page ${area.pageIndex + 1}`}
+            title={`Page ${(area.pageIndex ?? 0) + 1}`}
           />
         ))}
     </div>
@@ -252,23 +255,25 @@ export default function DocumentPreviewSheet({
         <div>No highlights available</div>
       )}
       {highlightsInternal.map((note) => (
-        <div
-          key={note.id}
-          style={{
-            marginBottom: "15px",
-            padding: "10px",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-          onClick={() => {
-            const { jumpToHighlightArea } = highlightPluginInstance;
-            jumpToHighlightArea(note.highlightAreas[0]);
-            defaultLayoutPluginInstance.activateTab(3);
-          }}
-        >
-          <p style={{ margin: 0, fontSize: "14px" }}>{note.content}</p>
-        </div>
+        note?.content ? (
+          <div
+            key={note.id}
+            style={{
+              marginBottom: "15px",
+              padding: "10px",
+              border: "1px solid #ddd",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              const { jumpToHighlightArea } = highlightPluginInstance;
+              jumpToHighlightArea(note.highlightAreas[0]);
+              defaultLayoutPluginInstance.activateTab(3);
+            }}
+          >
+            <p style={{ margin: 0, fontSize: "14px" }}>{note.content}</p>
+          </div>
+        ) : null
       ))}
     </div>
   );
@@ -303,23 +308,29 @@ export default function DocumentPreviewSheet({
                 )}
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuContent align="end" className="w-80">
               {sources.map((source, idx) => (
                 <DropdownMenuItem
                   key={idx}
                   onClick={() => handleSourceSelect(source)}
-                  className={`flex items-center gap-2 ${selectedSource?.url === source.url ? 'bg-primary/10 border-primary/20' : ''}`}
+                  className={`flex items-center gap-3 py-3 px-3 cursor-pointer ${selectedSource?.url === source.url
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : ''
+                    }`}
                 >
-                  <div className="flex items-center gap-2 flex-1">
-                    <FileText className={`w-4 h-4 ${selectedSource?.url === source.url ? 'text-primary' : 'text-muted-foreground'}`} />
-                    <div className="flex-1 truncate">
-                      <p className={`truncate line-clamp-1 font-medium ${selectedSource?.url === source.url ? 'text-primary' : ''}`}>
-                        {source.source}
+                  <FileText className={`w-5 h-5 shrink-0 ${selectedSource?.url === source.url
+                    ? 'text-primary'
+                    : 'text-muted-foreground'
+                    }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {source.source}
+                    </p>
+                    {source.page && (
+                      <p className="text-xs text-muted-foreground">
+                        Page {source.page}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {source.url}
-                      </p>
-                    </div>
+                    )}
                   </div>
                   {selectedSource?.url === source.url && (
                     <Check className="w-4 h-4 text-primary shrink-0" />
@@ -331,31 +342,41 @@ export default function DocumentPreviewSheet({
         </SheetHeader>
 
         {/* Tabs for PDF Viewer and Raw Text */}
-        <Tabs
-          defaultValue="pdf"
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          <TabsList className="mx-4 mt-2 w-fit">
-            <TabsTrigger value="pdf" className="gap-2">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tab Buttons */}
+          <div className="mx-4 mt-2 w-fit flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTab("pdf")}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === "pdf"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
               <FileText className="w-4 h-4" />
               PDF Viewer
-            </TabsTrigger>
-            <TabsTrigger value="raw" className="gap-2">
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("raw")}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === "raw"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
               <FileCode className="w-4 h-4" />
               Raw Retrieved Docs
-            </TabsTrigger>
-          </TabsList>
+            </button>
+          </div>
 
-          {/* PDF Viewer Tab */}
-          <TabsContent
-            value="pdf"
-            className="flex-1 overflow-hidden m-4 mt-2"
-          >
+          {/* PDF Viewer Tab - Keep mounted for caching */}
+          <div className={`flex-1 overflow-hidden m-4 mt-2 ${activeTab === "pdf" ? "block" : "hidden"}`}>
             <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
-              {selectedSource ? (
+              {selectedSource && selectedSource.url ? (
                 <Viewer
+                  key={selectedSource.url}
                   fileUrl={selectedSource.url}
-                  initialPage={selectedSource.page - 1 || 0}
+                  initialPage={(selectedSource.page ?? 0) - 1}
                   plugins={[
                     defaultLayoutPluginInstance,
                     highlightPluginInstance,
@@ -369,13 +390,10 @@ export default function DocumentPreviewSheet({
                 </div>
               )}
             </Worker>
-          </TabsContent>
+          </div>
 
           {/* Raw Text Tab */}
-          <TabsContent
-            value="raw"
-            className="flex-1 overflow-auto m-4 mt-2 pr-2"
-          >
+          <div className={`flex-1 overflow-auto m-4 mt-2 pr-2 ${activeTab === "raw" ? "block" : "hidden"}`}>
             <div className="space-y-4 pb-8">
               {/* Header with source filter */}
               <div className="flex items-center justify-between pb-2">
@@ -405,8 +423,8 @@ export default function DocumentPreviewSheet({
                 ))}
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

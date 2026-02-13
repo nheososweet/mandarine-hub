@@ -8,6 +8,8 @@ import { Power, Settings, Send, Volume2, Wifi, Mic, Sparkles, X } from "lucide-r
 interface Speaker {
     id: string;
     name: string;
+    reference_audio?: string;
+    reference_text?: string;
 }
 
 interface Message {
@@ -38,6 +40,8 @@ export default function VoiceAgent() {
     const analyserRef = useRef<AnalyserNode | null>(null);
     const [pcId, setPcId] = useState<string>("");
 
+    console.log("defaultSpeaker", selectedSpeaker)
+
     // Fetch Speakers on Mount
     useEffect(() => {
         async function fetchSpeakers() {
@@ -47,7 +51,8 @@ export default function VoiceAgent() {
                 const loadedSpeakers = data.speakers || [];
                 setSpeakers(loadedSpeakers);
                 if (loadedSpeakers.length > 0) {
-                    setSelectedSpeaker(loadedSpeakers[0].id);
+                    const defaultSpeaker = loadedSpeakers.find((s: Speaker) => s.name === "Giọng Google Nữ") || loadedSpeakers[0];
+                    setSelectedSpeaker(defaultSpeaker.id);
                 } else {
                     console.warn("⚠️ No speakers returned from API");
                 }
@@ -94,7 +99,7 @@ export default function VoiceAgent() {
             const radius = 130; // Radius of the visualizer circle
 
             ctx.beginPath();
-            ctx.strokeStyle = "rgba(34, 211, 238, 0.4)";
+            ctx.strokeStyle = "rgba(238, 64, 54, 0.4)";
             ctx.lineWidth = 2;
 
             for (let i = 0; i < bufferLength; i++) {
@@ -114,7 +119,7 @@ export default function VoiceAgent() {
 
             // Glow effect
             ctx.shadowBlur = 10;
-            ctx.shadowColor = "rgba(34, 211, 238, 0.8)";
+            ctx.shadowColor = "rgba(238, 64, 54, 0.8)";
         };
 
         draw();
@@ -222,12 +227,12 @@ export default function VoiceAgent() {
                     {
                         urls: "turns:webrtc.svisor.vn:3478",
                         username: "coturnuser",
-                        credential: "coturnpass"
+                        credential: "coturnpass@spX2025"
                     },
                     {
                         urls: "turn:webrtc.svisor.vn:3478",
                         username: "coturnuser",
-                        credential: "coturnpass"
+                        credential: "coturnpass@spX2025"
                     },
                 ],
                 bundlePolicy: 'max-bundle',
@@ -269,10 +274,13 @@ export default function VoiceAgent() {
 
                     // Send candidate to server
                     try {
-                        await fetch("https://realtime.svisor.vn/ice", {
-                            // await fetch("http://localhost:9112/ice", {
+                        await fetch("https://gateway.svisor.vn/gateway/transcribe-service/ice", {
+                            // await fetch("http://118.70.33.126:8118/ice", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: {
+                                "Content-Type": "application/json",
+                                "apiKey": "spzac_vaBoaC7oGq8xjclR7spDx7sBLmYy5wZPcc872351073d113b"
+                            },
                             body: JSON.stringify({
                                 pc_id: currentPcId,
                                 candidate: {
@@ -290,10 +298,13 @@ export default function VoiceAgent() {
                     console.log('🏁 ICE gathering completed');
                     // Send end-of-candidates signal
                     if (currentPcId) {
-                        fetch("https://realtime.svisor.vn/ice", {
-                            // fetch("http://localhost:9112/ice", {
+                        fetch("https://gateway.svisor.vn/gateway/transcribe-service/ice", {
+                            // fetch("http://118.70.33.126:8118/ice", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: {
+                                "Content-Type": "application/json",
+                                "apiKey": "spzac_vaBoaC7oGq8xjclR7spDx7sBLmYy5wZPcc872351073d113b"
+                            },
                             body: JSON.stringify({
                                 pc_id: currentPcId,
                                 candidate: null
@@ -361,29 +372,30 @@ export default function VoiceAgent() {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            console.log("✈️ Sending offer to: https://realtime.svisor.vn/offer");
-
-            const response = await fetch("https://realtime.svisor.vn/offer", {
-                // const response = await fetch("http://localhost:9112/offer", {
+            const response = await fetch("https://gateway.svisor.vn/gateway/transcribe-service/offer", {
+                // const response = await fetch("http://118.70.33.126:8118/offer", {
                 method: "POST",
                 mode: 'cors', // 🔥 Explicitly set CORS mode
                 headers: {
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Accept": "application/json",
+                    "apiKey": "spzac_vaBoaC7oGq8xjclR7spDx7sBLmYy5wZPcc872351073d113b"
                 },
                 body: JSON.stringify({
                     sdp: offer.sdp,
                     type: offer.type,
                     speaker_id: selectedSpeaker,
-                    user_system_prompt: systemPrompt
+                    user_system_prompt: systemPrompt,
+                    reference_audio: speakers.find(s => s.id === selectedSpeaker)?.reference_audio,
+                    reference_text: speakers.find(s => s.id === selectedSpeaker)?.reference_text
                 }),
             }).catch(async (err) => {
                 // 🔥 Diagnostic: Try a simple GET to see if it's a domain-wide block
                 console.error("Fetch failed:", err);
                 try {
                     setStatus("Checking connection...");
-                    const diagRes = await fetch("https://realtime.svisor.vn/", { mode: 'no-cors' });
-                    alert("🔍 Diagnostic: Domain is reachable via no-cors GET. This points strongly to a server-side CORS (OPTIONS preflight) configuration issue.");
+                    // const diagRes = await fetch("http://118.70.33.126:8118/", { mode: 'no-cors' });
+                    // alert("🔍 Diagnostic: Domain is reachable via no-cors GET. This points strongly to a server-side CORS (OPTIONS preflight) configuration issue.");
                 } catch (diagErr: any) {
                     alert(`🔍 Diagnostic: Root domain also blocked: ${diagErr.message}. This might be a DNS or general network restriction on your iPhone/Local network.`);
                 }
@@ -402,10 +414,13 @@ export default function VoiceAgent() {
                 console.log(`🔄 Sending ${pendingCandidates.length} queued candidates`);
                 for (const candidate of pendingCandidates) {
                     try {
-                        await fetch("https://realtime.svisor.vn/ice", {
-                            // await fetch("http://localhost:9112/ice", {
+                        await fetch("https://gateway.svisor.vn/gateway/transcribe-service/ice", {
+                            // await fetch("http://118.70.33.126:8118/ice", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: {
+                                "Content-Type": "application/json",
+                                "apiKey": "spzac_vaBoaC7oGq8xjclR7spDx7sBLmYy5wZPcc872351073d113b"
+                            },
                             body: JSON.stringify({
                                 pc_id: currentPcId,
                                 candidate: {
@@ -478,23 +493,23 @@ export default function VoiceAgent() {
                 <div className="absolute top-0 left-0 right-0 p-4 lg:p-8 flex justify-between items-center z-20">
                     <div className="flex items-center gap-4">
                         <div className="relative flex items-center justify-center">
-                            <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-cyan-400 shadow-[0_0_15px_#22d3ee]" : "bg-red-500 shadow-[0_0_10px_#ef4444]"}`} />
-                            {isConnected && <div className="absolute w-full h-full rounded-full bg-cyan-400 animate-ping opacity-40" />}
+                            <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? "" : "bg-red-500 shadow-[0_0_10px_#ef4444]"}`} style={isConnected ? { backgroundColor: "var(--primary)", boxShadow: "0 0 15px var(--primary)" } : {}} />
+                            {isConnected && <div className="absolute w-full h-full rounded-full animate-ping opacity-40" style={{ backgroundColor: "var(--primary)" }} />}
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] lg:text-sm uppercase tracking-[0.2em] text-cyan-400/40 leading-none mb-1 lg:mb-1.5 font-black">Status</span>
+                            <span className="text-[10px] lg:text-sm uppercase tracking-[0.2em] leading-none mb-1 lg:mb-1.5 font-black" style={{ color: "var(--primary-light)" }}>Status</span>
                             <span className="text-sm lg:text-base font-black tracking-[0.1em] uppercase text-white leading-none shadow-[0_0_10px_rgba(255,255,255,0.1)]">{status}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-6 text-white/20">
-                        <Wifi size={16} className={isConnected ? "text-cyan-400 opacity-100" : "opacity-40"} />
+                        <Wifi size={16} className={isConnected ? "opacity-100" : "opacity-40"} style={isConnected ? { color: "var(--primary)" } : {}} />
                         <div className="h-4 w-px bg-white/10" />
                         <motion.button
                             whileHover={{ scale: 1.1, rotate: 90 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setShowSettings(true)}
                         >
-                            <Settings size={16} className="text-white/40 hover:text-cyan-400 cursor-pointer transition-colors" />
+                            <Settings size={16} className="text-white/40 cursor-pointer transition-colors" style={{ color: "rgba(255,255,255,0.4)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--primary)"} onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,255,255,0.4)"} />
                         </motion.button>
                     </div>
                 </div>
@@ -522,27 +537,41 @@ export default function VoiceAgent() {
                                 </button>
 
                                 <h3 className="text-lg lg:text-xl font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
-                                    <Settings size={20} className="text-cyan-400" />
+                                    <Settings size={20} style={{ color: "var(--primary)" }} />
                                     System Configuration
                                 </h3>
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-[10px] lg:text-xs font-bold text-cyan-400/60 uppercase tracking-widest mb-2">
+                                        <label className="block text-[10px] lg:text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "var(--primary-light)" }}>
                                             System Prompt / Persona
                                         </label>
                                         <textarea
                                             value={systemPrompt}
                                             onChange={(e) => setSystemPrompt(e.target.value)}
                                             placeholder="Define the AI's behavior..."
-                                            className="w-full h-32 lg:h-40 bg-black/40 border border-white/10 rounded-xl p-4 text-white/80 focus:outline-none focus:border-cyan-400/40 focus:bg-white/[0.02] resize-none transition-all placeholder:text-white/20 text-sm leading-relaxed"
+                                            className="w-full h-32 lg:h-40 bg-black/40 border border-white/10 rounded-xl p-4 text-white/80 focus:outline-none focus:bg-white/[0.02] resize-none transition-all placeholder:text-white/20 text-sm leading-relaxed"
+                                            style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                                            onFocus={(e) => e.currentTarget.style.borderColor = "var(--primary-medium)"}
+                                            onBlur={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
                                         />
                                     </div>
 
                                     <div className="flex justify-end pt-2">
                                         <button
                                             onClick={() => setShowSettings(false)}
-                                            className="px-6 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-full text-sm font-bold uppercase tracking-wider transition-all border border-cyan-500/20"
+                                            className="px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all border"
+                                            style={{
+                                                backgroundColor: "var(--primary-light)",
+                                                borderColor: "var(--primary-medium)",
+                                                color: "var(--primary)"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = "var(--primary-medium)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = "var(--primary-light)";
+                                            }}
                                         >
                                             Save Configuration
                                         </button>
@@ -573,7 +602,11 @@ export default function VoiceAgent() {
                                 repeat: Infinity,
                                 ease: "easeInOut"
                             }}
-                            className={`w-32 h-32 lg:w-48 lg:h-48 rounded-full bg-gradient-to-br from-cyan-400 via-blue-600 to-indigo-900 transition-all duration-1000 shadow-[0_0_80px_rgba(34,211,238,0.2)] ${isConnected ? "" : "grayscale opacity-20"}`}
+                            className={`w-32 h-32 lg:w-48 lg:h-48 rounded-full transition-all duration-1000 ${isConnected ? "" : "grayscale opacity-20"}`}
+                            style={{
+                                background: `linear-gradient(to bottom right, var(--primary), var(--primary-hover), rgba(238, 64, 54, 0.6))`,
+                                boxShadow: "0 0 80px var(--primary-light)"
+                            }}
                         >
                             <div className="w-full h-full rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.2)_0%,transparent_70%)]" />
                         </motion.div>
@@ -586,7 +619,8 @@ export default function VoiceAgent() {
                                         initial={{ opacity: 0, rotate: 0 }}
                                         animate={{ opacity: 1, rotate: 360 }}
                                         transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                                        className="absolute inset-[-40px] rounded-full border border-cyan-500/10 border-dashed"
+                                        className="absolute inset-[-40px] rounded-full border border-dashed"
+                                        style={{ borderColor: "var(--primary-light)" }}
                                     />
                                     <motion.div
                                         initial={{ opacity: 0, rotate: 0 }}
@@ -597,7 +631,8 @@ export default function VoiceAgent() {
                                     <motion.div
                                         animate={{ opacity: [0.1, 0.3, 0.1] }}
                                         transition={{ duration: 2, repeat: Infinity }}
-                                        className="absolute inset-[-70px] rounded-full bg-cyan-400/5 blur-3xl -z-10"
+                                        className="absolute inset-[-70px] rounded-full blur-3xl -z-10"
+                                        style={{ backgroundColor: "var(--primary-light)" }}
                                     />
                                 </>
                             )}
@@ -616,7 +651,7 @@ export default function VoiceAgent() {
                 {/* Bottom Tools Dock */}
                 <div className="absolute bottom-6 lg:bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 lg:gap-6 bg-white/5 backdrop-blur-2xl px-4 lg:px-10 py-3 lg:py-5 rounded-[2rem] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-20 w-max max-w-[90vw]">
                     <div className="flex items-center gap-1.5 lg:gap-4">
-                        <div className="p-1.5 lg:p-2 bg-white/5 rounded-full text-cyan-400 shrink-0">
+                        <div className="p-1.5 lg:p-2 bg-white/5 rounded-full shrink-0" style={{ color: "var(--primary)" }}>
                             <Volume2 size={16} className="lg:w-[18px] lg:h-[18px]" />
                         </div>
                         <select
@@ -639,8 +674,26 @@ export default function VoiceAgent() {
                         onClick={toggleConnect}
                         className={`flex items-center gap-3 lg:gap-5 px-6 lg:px-10 py-3 lg:py-4 rounded-full font-black text-xs lg:text-sm uppercase tracking-[0.2em] transition-all shadow-[0_15px_40px_rgba(0,0,0,0.4)] ${isConnected
                             ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white hover:shadow-red-500/40"
-                            : "bg-cyan-500 text-black border border-cyan-400 hover:bg-cyan-400 hover:shadow-cyan-500/40"
+                            : ""
                             }`}
+                        style={!isConnected ? {
+                            backgroundColor: "var(--primary)",
+                            color: "var(--primary-foreground)",
+                            borderColor: "var(--primary)",
+                            boxShadow: "0 15px 40px var(--primary-light)"
+                        } : {}}
+                        onMouseEnter={(e) => {
+                            if (!isConnected) {
+                                e.currentTarget.style.backgroundColor = "var(--primary-hover)";
+                                e.currentTarget.style.boxShadow = "0 15px 40px var(--primary-medium)";
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isConnected) {
+                                e.currentTarget.style.backgroundColor = "var(--primary)";
+                                e.currentTarget.style.boxShadow = "0 15px 40px var(--primary-light)";
+                            }
+                        }}
                     >
                         <Power size={12} className="lg:w-[14px] lg:h-[14px]" />
                         {isConnected ? "Terminate" : "Initialize"}
@@ -652,13 +705,13 @@ export default function VoiceAgent() {
             <div className="w-full lg:w-[450px] flex flex-col bg-[#070709] border-t lg:border-t-0 lg:border-l border-white/5 relative shadow-[-10px_0_30px_rgba(0,0,0,0.3)] min-h-0 flex-1">
                 <div className="p-6 lg:p-8 pb-4 flex items-center justify-between">
                     <div className="flex flex-col gap-2 lg:gap-3">
-                        <span className="text-[10px] lg:text-sm font-black text-cyan-400/50 uppercase tracking-[0.3em] lg:tracking-[0.5em] leading-none">Session Data</span>
+                        <span className="text-[10px] lg:text-sm font-black uppercase tracking-[0.3em] lg:tracking-[0.5em] leading-none" style={{ color: "var(--primary-light)" }}>Session Data</span>
                         <h2 className="text-xl lg:text-3xl font-black text-white tracking-[0.1em] lg:tracking-[0.15em] uppercase leading-none">Live Transcript</h2>
                     </div>
                     <div className="flex gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/20" />
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/20" />
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/50 animate-pulse" />
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--primary-light)" }} />
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--primary-light)" }} />
+                        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: "var(--primary-medium)" }} />
                     </div>
                 </div>
 
@@ -673,19 +726,25 @@ export default function VoiceAgent() {
                                 className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                             >
                                 <div className="flex items-center gap-2 mb-2 px-1">
-                                    <span className={`text-sm font-black uppercase tracking-[0.2em] ${msg.role === 'user' ? 'text-cyan-400/80' : 'text-white/40'}`}>
+                                    <span className={`text-sm font-black uppercase tracking-[0.2em] ${msg.role === 'user' ? '' : 'text-white/40'}`} style={msg.role === 'user' ? { color: "var(--primary)" } : {}}>
                                         {msg.role === 'system' ? 'Kernel Core' : msg.role}
                                     </span>
                                 </div>
                                 <div className={`relative px-6 lg:px-8 py-4 lg:py-6 rounded-2xl lg:rounded-3xl text-base lg:text-xl font-medium leading-relaxed transition-all shadow-2xl group ${msg.role === 'user'
-                                    ? 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-50'
+                                    ? ''
                                     : msg.role === 'ai'
                                         ? 'bg-white/[0.04] border border-white/10 text-white shadow-[20px_20px_40px_rgba(0,0,0,0.3)]'
                                         : 'bg-transparent text-white/30 border border-white/5 text-sm lg:text-base italic py-4'
-                                    }`}>
+                                    }`}
+                                    style={msg.role === 'user' ? {
+                                        backgroundColor: "var(--primary-light)",
+                                        borderColor: "var(--primary-medium)",
+                                        color: "var(--primary-foreground)"
+                                    } : {}}
+                                >
                                     {msg.content}
                                     {msg.role === 'ai' && idx === messages.length - 1 && isSpeaking && (
-                                        <div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                                        <div className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: "var(--primary)" }} />
                                     )}
                                 </div>
                             </motion.div>
@@ -696,7 +755,7 @@ export default function VoiceAgent() {
                 {/* Input Area (Pinned Bottom) */}
                 <div className="absolute bottom-0 left-0 right-0 p-8 pt-10 bg-gradient-to-t from-[#070709] via-[#070709] to-transparent">
                     <div className="relative group">
-                        <div className="absolute inset-0 bg-cyan-500/5 blur-xl group-focus-within:bg-cyan-500/10 transition-all rounded-full" />
+                        <div className="absolute inset-0 blur-xl transition-all rounded-full" style={{ backgroundColor: "var(--primary-light)" }} />
                         <input
                             type="text"
                             placeholder="Type transmission payload..."
@@ -704,12 +763,31 @@ export default function VoiceAgent() {
                             onChange={(e) => setInputText(e.target.value)}
                             onKeyDown={handleKeyDown}
                             disabled={!isConnected}
-                            className="w-full bg-white/5 border border-white/10 rounded-[2.5rem] pl-6 lg:pl-10 pr-16 lg:pr-20 py-4 lg:py-6 text-base lg:text-xl text-white placeholder:text-white/10 focus:outline-none focus:border-cyan-500/30 focus:bg-white/[0.08] transition-all disabled:opacity-30 disabled:grayscale relative z-10 shadow-inner font-bold tracking-wide"
+                            className="w-full bg-white/5 border border-white/10 rounded-[2.5rem] pl-6 lg:pl-10 pr-16 lg:pr-20 py-4 lg:py-6 text-base lg:text-xl text-white placeholder:text-white/10 focus:outline-none focus:bg-white/[0.08] transition-all disabled:opacity-30 disabled:grayscale relative z-10 shadow-inner font-bold tracking-wide"
+                            style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                            onFocus={(e) => e.currentTarget.style.borderColor = "var(--primary-medium)"}
+                            onBlur={(e) => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
                         />
                         <button
                             onClick={sendMessage}
                             disabled={!isConnected}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-cyan-500/10 rounded-full text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all disabled:opacity-0 z-20"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full transition-all disabled:opacity-0 z-20"
+                            style={{
+                                backgroundColor: "var(--primary-light)",
+                                color: "var(--primary)"
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!e.currentTarget.disabled) {
+                                    e.currentTarget.style.backgroundColor = "var(--primary)";
+                                    e.currentTarget.style.color = "var(--primary-foreground)";
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!e.currentTarget.disabled) {
+                                    e.currentTarget.style.backgroundColor = "var(--primary-light)";
+                                    e.currentTarget.style.color = "var(--primary)";
+                                }
+                            }}
                         >
                             <Send size={18} />
                         </button>

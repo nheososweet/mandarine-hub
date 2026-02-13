@@ -170,7 +170,7 @@ export default function ChatPage() {
       setStatus("streaming");
 
       const response = await fetch(
-        "http://127.0.0.1:8000/api/v1/basic-rag/chat-stream",
+        "http://127.0.0.1:8001/api/v1/basic-rag/chat-stream",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
