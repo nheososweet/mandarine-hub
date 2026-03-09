@@ -52,31 +52,6 @@ export const navigationGroups: NavGroup[] = [
         icon: LayoutDashboard,
       },
       {
-        title: "RAG",
-        url: "/rag",
-        icon: FileText,
-      },
-      // {
-      //   title: "PDF Highlighter",
-      //   url: "/pdf-highlighter",
-      //   icon: Highlighter,
-      // },
-      {
-        title: "Agno Chat",
-        url: "/chat",
-        icon: MessageSquare,
-      },
-      {
-        title: "Knowledge Base",
-        url: "/knowledge",
-        icon: Database,
-      },
-      {
-        title: "Agents",
-        url: "/agents",
-        icon: Bot,
-      },
-      {
         title: "Workflows",
         url: "/workflows",
         icon: Workflow,
@@ -96,11 +71,6 @@ export const navigationGroups: NavGroup[] = [
           { title: "Notifications", url: "/settings/notifications", },
           { title: "Security", url: "/settings/security", },
         ],
-      },
-      {
-        title: "API Keys",
-        url: "/api-keys",
-        icon: Key,
       },
       {
         title: "Team",
